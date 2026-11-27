@@ -1,11 +1,101 @@
 {
   "_comment": "role -> takes (one is picked at random each time), gain (linear, 0..1). All files are mono 44.1 kHz, peak -3 dBFS. Sources and licences: ASSETS.md",
-  "step_grass": { "files": ["step_grass_0.wav", "step_grass_1.wav", "step_grass_2.wav", "step_grass_3.wav", "step_grass_4.wav"], "gain": 0.35 },
-  "step_hard":  { "files": ["step_hard_0.wav", "step_hard_1.wav", "step_hard_2.wav"], "gain": 0.30 },
-  "throw":      { "files": ["throw_0.wav", "throw_1.wav"], "gain": 0.55 },
-  "bounce":     { "files": ["bounce_0.wav", "bounce_1.wav", "bounce_2.wav", "bounce_3.wav", "bounce_4.wav"], "gain": 0.7 },
-  "wall":       { "files": ["wall_0.wav", "wall_1.wav"], "gain": 0.6 },
-  "bark":       { "files": ["bark_0.wav", "bark_1.wav"], "gain": 0.45 },
-  "select":     { "files": ["select_0.wav"], "gain": 0.5, "ui": true },
-  "move":       { "files": ["move_0.wav"], "gain": 0.35, "ui": true }
+  "step_grass": {
+    "files": [
+      "step_grass_0.wav",
+      "step_grass_1.wav",
+      "step_grass_2.wav",
+      "step_grass_3.wav",
+      "step_grass_4.wav"
+    ],
+    "gain": 0.35
+  },
+  "step_hard": {
+    "files": [
+      "step_hard_0.wav",
+      "step_hard_1.wav",
+      "step_hard_2.wav"
+    ],
+    "gain": 0.3
+  },
+  "throw": {
+    "files": [
+      "throw_0.wav",
+      "throw_1.wav"
+    ],
+    "gain": 0.55
+  },
+  "bounce": {
+    "files": [
+      "bounce_0.wav",
+      "bounce_1.wav",
+      "bounce_2.wav",
+      "bounce_3.wav",
+      "bounce_4.wav"
+    ],
+    "gain": 0.7
+  },
+  "wall": {
+    "files": [
+      "wall_0.wav",
+      "wall_1.wav"
+    ],
+    "gain": 0.6
+  },
+  "bark": {
+    "files": [
+      "bark_0.wav",
+      "bark_1.wav"
+    ],
+    "gain": 0.45
+  },
+  "select": {
+    "files": [
+      "select_0.wav"
+    ],
+    "gain": 0.5,
+    "ui": true
+  },
+  "move": {
+    "files": [
+      "move_0.wav"
+    ],
+    "gain": 0.35,
+    "ui": true
+  },
+  "wood": {
+    "files": [
+      "library/kenney-impact-sounds/impactWood_medium_002.ogg"
+    ],
+    "gain": 0.55,
+    "ui": true
+  },
+  "hammer": {
+    "files": [
+      "library/kenney-impact-sounds/impactWood_heavy_001.ogg"
+    ],
+    "gain": 0.72,
+    "ui": true
+  },
+  "saw": {
+    "files": [
+      "library/kenney-interface-sounds/scratch_003.ogg"
+    ],
+    "gain": 0.43,
+    "ui": true
+  },
+  "driver": {
+    "files": [
+      "library/kenney-rpg-audio/metalClick.ogg"
+    ],
+    "gain": 0.4,
+    "ui": true
+  },
+  "finish": {
+    "files": [
+      "library/kenney-music-jingles/pizzicato/jingles_PIZZI00.ogg"
+    ],
+    "gain": 0.52,
+    "ui": true
+  }
 }

@@ -36,11 +36,11 @@ export class Sound {
     this.log = null;         // an array here records every play() call (used by tests)
   }
 
-  async load() {
+  async load(only = null) {
     const roles = await (await fetch(SOUNDS + 'sounds.json')).json();
     const loader = new THREE.AudioLoader();
     for (const [role, r] of Object.entries(roles)) {
-      if (role.startsWith('_')) continue;
+      if (role.startsWith('_') || (only && !only.includes(role))) continue;
       this.roles[role] = r;
       this.buffers[role] = await Promise.all(r.files.map((f) => loader.loadAsync(SOUNDS + f)));
     }

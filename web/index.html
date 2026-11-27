@@ -1,42 +1,103 @@
 <!doctype html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>P3 Starter (three.js)</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #b8d6f7; font-family: system-ui, sans-serif; }
-  canvas { display: block; }
-  #hud { position: fixed; left: 12px; top: 10px; padding: 8px 12px; border-radius: 8px;
-         background: rgba(20, 30, 40, 0.55); color: #fff; font-size: 13px; line-height: 1.5; pointer-events: none; }
-  #hud b { color: #ffd35c; }
-</style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-  }
-}
-</script>
-</head>
-<body>
-<div id="hud">
-  WASD move, Shift sprint, F throw ball, E wave<br>
-  Click: select or walk there (also on the minimap), drag: turn camera, wheel: zoom<br>
-  B colliders, M mute, F12 screenshot<br>
-  dog: <b id="dogstate">-</b> &nbsp; selected: <b id="selected">-</b> &nbsp; <span id="fps"></span>
-</div>
-<script>
-  // show loading errors on screen (for example when the page was opened as file://)
-  const showError = (msg) => {
-    const hud = document.getElementById('hud');
-    hud.innerHTML += `<br><b style="color:#ff8a80">Error:</b> ${msg}`;
-  };
-  addEventListener('error', (e) => showError(e.message));
-  addEventListener('unhandledrejection', (e) => showError(e.reason?.message ?? e.reason));
-  if (location.protocol === 'file:') showError('run a local server (see README) instead of opening the file directly');
-</script>
-<script type="module" src="./main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#183e33" />
+    <title>한 장 공방 · 3D 목공 시뮬레이터</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./workshop/style.css" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.min.js" } }
+    </script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <h1>한 장 공방</h1>
+        <span class="sub">3D 목공 시뮬레이터</span>
+      </div>
+      <nav>
+        <button id="mute" aria-pressed="false">소리 켜짐</button><button id="options">설정</button>
+      </nav>
+    </header>
+    <main>
+      <section id="workarea" aria-label="공방">
+        <div id="viewport">
+          <canvas id="world" aria-label="3D 작업대"></canvas
+          ><canvas id="overlay" aria-hidden="true"></canvas>
+          <div class="view-tags">
+            <span id="mode">공방 탐색</span><span id="live">웹캠 대기</span>
+          </div>
+          <div id="preview" hidden>
+            <video id="camera" muted playsinline></video><canvas id="skeleton"></canvas>
+          </div>
+          <div id="alert" hidden role="alert">
+            <strong id="alert-title">웹캠 연결</strong>
+            <p id="alert-text"></p>
+            <button id="retry-camera">다시 연결</button>
+          </div>
+          <div id="load-error" hidden role="alert"></div>
+        </div>
+        <div class="dock">
+          <div class="dock-text" aria-live="polite">
+            <div id="eyebrow">공방 탐색</div>
+            <h2 id="action-title">작업대로 다가가세요</h2>
+            <p id="instruction">방향키로 이동하고 화면을 클릭해 마우스로 둘러보세요.</p>
+          </div>
+          <button class="primary" id="action">작업대로 이동 <b>→</b></button>
+        </div>
+      </section>
+      <aside>
+        <div class="planhead">
+          <span class="kind">제작 도면</span><span class="units">단위 mm</span>
+        </div>
+        <h2>2단 미니 책장</h2>
+        <p class="dimensions">330 × 450 × 195 mm</p>
+        <div class="blueprint">
+          <canvas id="drawing" aria-label="책장의 정면과 옆면이 보이는 입체 도면"></canvas>
+        </div>
+        <div class="progress-title">
+          <h3>제작 순서</h3>
+          <span id="step-count">0 / 6</span>
+        </div>
+        <ol id="steps"></ol>
+        <div class="material"><span>시작 재료</span><strong>2,140 × 180 × 15 mm</strong></div>
+      </aside>
+    </main>
+    <dialog id="settings">
+      <form method="dialog">
+        <div class="dialoghead">
+          <h2>작업 환경</h2>
+          <button value="close" aria-label="닫기">×</button>
+        </div>
+      </form>
+      <label
+        >렌더링 품질
+        <select id="quality">
+          <option value="normal">기본 · 1280 × 720</option>
+          <option value="low">저사양 · 960 × 540</option>
+        </select></label
+      >
+      <label>손 관절 미리보기 <input id="show-preview" type="checkbox" checked /></label>
+      <div class="measure">
+        <h3>60초 성능 측정</h3>
+        <p id="meter">작업대에서 웹캠을 연결하면 측정할 수 있어요.</p>
+        <button id="measure">측정 시작</button>
+      </div>
+      <div class="dialog-actions">
+        <button id="reset-stage">현재 작업 다시 시도</button><button id="new">처음부터 시작</button>
+      </div>
+    </dialog>
+    <script>
+      if (location.protocol === 'file:') {
+        var e = document.getElementById('load-error');
+        e.hidden = false;
+        e.textContent =
+          'code 폴더에서 py -m http.server 8000 실행 후 http://localhost:8000/web/ 로 접속하세요.';
+      }
+    </script>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>
