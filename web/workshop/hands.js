@@ -21,6 +21,7 @@ export class Hands {
     this.gpuFailed = false;
     this.active = false;
     this.frameId = 0;
+    this.lastHand = null;
   }
   captureSize() {
     return {
@@ -124,7 +125,7 @@ export class Hands {
           clearTimeout(timeout);
           if (this.active && this.delegate === 'GPU' && !this.gpuFailed) {
             this.gpuFailed = true;
-            this.deliver(null, performance.now());
+            this.onFrame(null, null);
             this.start();
           } else if (this.active) this.fail(gen, '손 인식이 중단됐어요. 다시 연결해 주세요.');
           else reject(Error(data.message));
@@ -137,10 +138,16 @@ export class Hands {
     });
   }
   deliver(marks, time) {
-    if (!marks) this.pinch.reset();
-    const pt = marks
-      ? this.pinch.read(marks, this.video.videoWidth, this.video.videoHeight, time)
-      : null;
+    if (!marks) {
+      // A brief tracking gap can occur when fingertips overlap.
+      if (this.lastHand !== null && time - this.lastHand < 180) return;
+      this.lastHand = null;
+      this.pinch.reset();
+      this.onFrame(null, null);
+      return;
+    }
+    this.lastHand = time;
+    const pt = this.pinch.read(marks, this.video.videoWidth, this.video.videoHeight, time);
     this.onFrame(pt, marks);
   }
   schedule(gen) {
@@ -201,6 +208,7 @@ export class Hands {
     this.stream = null;
     this.video.pause();
     this.video.srcObject = null;
+    this.lastHand = null;
     this.pinch.reset();
   }
 }

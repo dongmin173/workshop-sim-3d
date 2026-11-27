@@ -203,29 +203,55 @@ export class Pinch {
   reset() {
     this.down = false;
     this.ready = false;
+    this.closingAt = null;
+    this.gripOffset = null;
     this.point = null;
   }
   read(marks, width, height, timestamp) {
     const dist = (a, b) =>
       Math.hypot((marks[a].x - marks[b].x) * width, (marks[a].y - marks[b].y) * height);
-    const ratio = dist(4, 8) / Math.max(8, dist(5, 17));
-    if (ratio >= 0.45) {
+    // Palm length still gives a useful scale when the hand turns edge-on.
+    const palmSize = Math.max(8, dist(5, 17), dist(0, 9));
+    const ratio = dist(4, 8) / palmSize;
+    const wasDown = this.down;
+    if (ratio >= 0.55) {
       this.down = false;
       this.ready = true;
-    } else if (this.ready && ratio <= 0.3) this.down = true;
-    // The index and pinky base joints move less than the tips during a pinch.
-    const indexBase = marks[5], pinkyBase = marks[17];
-    const palmX = (indexBase.x + pinkyBase.x) / 2,
-      palmY = (indexBase.y + pinkyBase.y) / 2;
-    const x = clamp((1 - palmX - 0.1) / 0.8, 0, 1),
-      y = clamp((palmY - 0.1) / 0.8, 0, 1);
-    const dt = this.point ? timestamp - this.point.t : 0;
-    const alpha = this.point ? 1 - Math.exp(-clamp(dt, 1, 200) / 32) : 1;
-    this.point = {
-      x: this.point ? this.point.x + alpha * (x - this.point.x) : x,
-      y: this.point ? this.point.y + alpha * (y - this.point.y) : y,
-      t: timestamp,
-    };
+      this.closingAt = null;
+    } else if (this.ready && !wasDown) {
+      this.closingAt ??= timestamp;
+      this.down = ratio <= 0.36;
+    }
+    // Keep the previous aim briefly while closing, including the first grabbed frame.
+    const steady = this.closingAt !== null && timestamp - this.closingAt <= 160;
+    if (this.down) this.closingAt = null;
+
+    const [wrist, indexBase, middleBase, ringBase, pinkyBase] = [0, 5, 9, 13, 17].map(
+      (i) => marks[i],
+    );
+    const palmX = (4 * wrist.x + indexBase.x + middleBase.x + ringBase.x + pinkyBase.x) / 8,
+      palmY = (4 * wrist.y + indexBase.y + middleBase.y + ringBase.y + pinkyBase.y) / 8;
+    const palmScreenX = clamp((1 - palmX - 0.1) / 0.8, 0, 1),
+      palmScreenY = clamp((palmY - 0.1) / 0.8, 0, 1);
+    const previous = this.point ?? { x: palmScreenX, y: palmScreenY, t: timestamp };
+    const dt = clamp(timestamp - previous.t, 1, 200);
+    const released = wasDown && !this.down;
+    // Keep the pointer continuous at both edges of the grip.
+    if ((steady && this.down) || released) {
+      this.gripOffset = { x: previous.x - palmScreenX, y: previous.y - palmScreenY };
+    } else if (!this.down && this.gripOffset) {
+      const remaining = Math.exp(-dt / 180);
+      this.gripOffset.x *= remaining;
+      this.gripOffset.y *= remaining;
+    }
+    const x = clamp(palmScreenX + (this.gripOffset?.x ?? 0), 0, 1),
+      y = clamp(palmScreenY + (this.gripOffset?.y ?? 0), 0, 1);
+    const dx = x - previous.x,
+      dy = y - previous.y;
+    const motion = Math.hypot(dx * width * 0.8, dy * height * 0.8) / palmSize;
+    const smoothing = 95 - 60 * clamp(motion / 0.22, 0, 1);
+    const alpha = steady ? 0 : 1 - Math.exp(-dt / smoothing);
+    this.point = { x: previous.x + alpha * dx, y: previous.y + alpha * dy, t: timestamp };
     return { ...this.point, down: this.down };
   }
 }
