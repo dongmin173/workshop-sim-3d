@@ -1,173 +1,69 @@
-# P3 Starter Pack
+# 한 장 공방
 
-P3에서 3D 작품을 만들 때 출발점으로 쓰는 팩입니다. 들어 있는 것:
+컴퓨터그래픽스 Project 3 · three.js 웹 트랙 · 202455439 이동민
 
-- **에셋:** Kenney 키트 7개(모델 622개), HDRI 3장, PBR 텍스처 4세트, 효과음 22개(게임에 사용)와 효과음 라이브러리 489개(`assets/sounds/library/SOUNDS.md`)
-- **실행되는 예제 장면:** 도로로 둘러싸인 공원, 양옆 주택가, 동서쪽 상점가가 있는 작은 마을입니다. 캐릭터를 움직이면 강아지가 다가와 반갑게 인사하고, 공을 던지면 물어 옵니다. 마우스로 물체를 고르거나 땅을 눌러 걸어갈 수 있고, 집과 나무에 부딪힙니다. 오른쪽 위에는 미니맵이 있습니다
-- **두 가지 구현:** Python + OpenGL 트랙과 three.js(WebGL) 트랙. 둘 중 프로젝트에 맞는 쪽을 고르세요
+긴 판자 한 장을 재단하고, 웹캠에 비친 한 손으로 두 칸짜리 책장을 조립하는 공방입니다.
 
-| Python + PyOpenGL | three.js |
-|---|---|
-| ![python](docs/python.png) | ![web](docs/web.png) |
+## Windows에서 실행
 
-## 1. 트랙 고르기
+1. 제출 ZIP의 압축을 모두 풉니다. `code` 폴더를 엽니다. 이 위치에 `web`, `assets`, 이 README가 있습니다.
+2. 탐색기 주소창에 `powershell`을 입력하고 Enter를 누릅니다.
+3. 아래 명령을 실행하고 창을 열어 둡니다.
 
-두 트랙은 같은 `scene.json`을 읽고, 같은 기능과 같은 강아지 행동을 구현합니다. 중간에 트랙을 바꿔도 장면은 그대로 옮겨집니다.
-
-| | Python + PyOpenGL (`python/`) | three.js (`web/`) |
-|---|---|---|
-| 렌더링 | 직접 작성한 GLSL 셰이더 (Blinn-Phong, shadow map, skinning) | three.js가 처리 (PBR, HDRI 환경광, 그림자) |
-| 장점 | 파이프라인 전체가 내 코드. 수업에서 배운 알고리즘을 직접 구현하기 좋음 | 적은 코드로 보기 좋은 결과. 브라우저 링크로 바로 시연 |
-| 이런 프로젝트에 | 셰이더 효과, 직접 만든 shadow/texture/BVH/CSG, 렌더링 기법 비교 | 상호작용이 많은 작품, 게임, 웹 전시, 많은 에셋과 애니메이션 |
-| 필요한 것 | Python 3.10 이상, uv | 웹 브라우저, 로컬 서버(Python 하나면 됨), 인터넷(three.js를 CDN에서 받음) |
-
-## 2. 실행
-
-### Python 트랙
-
-```bash
-cd python
-uv sync          # 처음 한 번: pygame-ce, PyOpenGL, numpy 설치
-uv run main.py
+```powershell
+py -m http.server 8000
 ```
 
-### three.js 트랙
+4. Chrome 또는 Edge에서 [공방 열기](http://localhost:8000/web/)로 접속합니다.
+5. 방향키로 작업대 앞까지 걸어가서 **E**를 누릅니다. 웹캠 사용을 허용하고 한 손을 펴서 보여 주세요. 화면의 작은 손 커서가 보이면 시작할 수 있습니다.
 
-브라우저는 보안 때문에 `file://`로 연 페이지에서 모델 파일을 읽지 못합니다. 그래서 로컬 서버가 필요합니다.
+Python 3가 `python`으로 설치된 환경에서는 `python -m http.server 8000` 명령도 사용할 수 있습니다. three.js, 손 인식 모델과 WASM은 프로젝트에 들어 있습니다. 웹 트랙 실행에는 별도 npm 설치가 필요하지 않습니다. 서버를 종료할 때는 PowerShell에서 Ctrl+C를 누릅니다.
 
-```bash
-# P3-Starter-Pack 폴더(이 README가 있는 곳)에서
-python -m http.server 8000
-```
+## 공방 조작
 
-브라우저에서 http://localhost:8000/web/ 을 엽니다. VS Code Live Server를 써도 됩니다. 이때도 서버의 루트는 `P3-Starter-Pack` 폴더여야 합니다(`web/`은 `../assets`, `../scene.json`을 읽습니다).
-
-### 조작 (두 트랙 같음)
-
-| 키 | 동작 |
+| 상황 | 조작 |
 |---|---|
-| W A S D | 이동 (카메라 기준 방향) |
-| Shift | 달리기 |
-| F | 공 던지기 (카메라가 보는 쪽으로) |
-| E | 손 흔들기 |
-| 마우스 왼쪽 클릭 | 물체 선택(노랗게 빛남), 땅이나 미니맵을 누르면 그곳으로 걸어감 |
-| 마우스 왼쪽 드래그 | 카메라 회전 |
-| 휠 | 확대, 축소 |
-| B | 충돌 영역(collider) 보기 |
-| M | 소리 끄기, 켜기 |
-| F12 | 스크린샷 |
-| Esc | 종료 (Python) |
+| 걷기와 둘러보기 | 위·아래 방향키로 앞뒤 이동, 좌우 방향키로 옆걸음. 3D 화면 클릭 후 마우스로 시점 회전. 포인터 잠금이 지원되지 않으면 마우스를 누른 채 드래그합니다. |
+| 작업대 | 가까이에서 E 또는 작업 시작 버튼. 화면 아래의 ‘작업대로 이동’으로도 작업대 앞까지 이동할 수 있습니다. |
+| 판자 이동 | 손 커서를 판자 또는 집기 표시에 맞추고 엄지와 검지를 맞댑니다. 그 상태로 윤곽에 옮기고 손을 폅니다. 맞춤 허용 거리는 30 mm입니다. |
+| 톱질 | 손잡이를 집어 A에서 시작합니다. B까지 밀고 A로 당기는 동작을 두 번 합니다. 손을 놓아도 끝낸 왕복은 같은 작업 모드 안에서 유지됩니다. |
+| 드라이버 | 손잡이를 집습니다. 손을 빈 원으로 옮겨 실제 공구 끝을 나사에 맞춥니다. 손끝으로 원 둘레를 시계 방향으로 돌립니다. 누적 180°에서 체결됩니다. 손을 펴고 원 오른쪽에서 다시 잡아 이어갈 수 있습니다. |
+| 망치 | 손잡이를 집어 못에 맞춘 뒤, 손을 위쪽 점선까지 올렸다가 타격선으로 내립니다. 못 하나당 3타입니다. |
+| 작업 중단 | Esc를 누르면 카메라가 꺼지고 공방으로 돌아갑니다. 같은 브라우저와 주소에서 다시 열면 마지막으로 완료한 절단·배치와 체결 진행을 복원합니다. |
+| 설정 | 기본/저사양 전환, 손 관절 미리보기, 현재 작업 다시 시도, 새 판자로 시작. M으로 소리를 켜거나 끕니다. |
 
-## 3. 기본으로 구현된 것
+손이 화면에서 사라지면 동작 집계를 멈춥니다. 손을 편 상태로 보여 준 뒤 다시 집으세요. 웹캠 연결 오류가 뜨면 주소창의 사이트 카메라 권한과 장치를 확인한 후 **다시 연결**을 누릅니다. 다른 컴퓨터에서 배포 주소로 접속할 때는 HTTPS를 사용합니다.
 
-- **glTF(GLB) 불러오기:** 노드 계층, base color(색 값과 텍스처). Python 트랙은 `gltf.py`에 로더를 직접 구현했습니다(외부 라이브러리 없음).
-- **애니메이션:** 노드 TRS keyframe 보간(위치, 크기는 선형, 회전은 slerp), 동작 사이 cross-fade
-- **GPU skinning:** 사람 캐릭터는 skinned mesh입니다(관절 7개). 강아지는 부위별 rigid 애니메이션입니다.
-- **조명:** 태양(directional light), 거리 안개, ACES tone mapping. 주변광은 Python 트랙이 하늘과 땅 색의 hemisphere ambient와 Blinn-Phong, three.js 트랙이 HDRI 환경광과 PBR(MeshStandardMaterial)
-- **그림자:** 플레이어를 따라다니는 shadow map(2048²). Python 트랙은 3×3 PCF를 셰이더에 직접 구현, three.js 트랙은 PCFSoftShadowMap
-- **3인칭 카메라:** 플레이어를 부드럽게 따라가는 orbit 카메라
-- **충돌:** 집, 차, 울타리는 AABB를 바닥에 투영한 사각형, 나무는 줄기 크기의 원. 캐릭터(원)를 밀어내는 방식이라 벽을 따라 미끄러집니다(`physics.py` `push_out`, `physics.js` `pushOut`). 꽃, 풀, 길처럼 낮은 물체는 막지 않습니다.
-- **공:** 중력과 semi-implicit Euler 적분, 땅과 벽에서 튀기(반발 계수), 굴러가며 느려지기(마찰)
-- **마우스 picking:** 화면 좌표에서 카메라 ray를 만들고 모든 물체의 AABB와 slab 방법으로 교차 검사. 가장 가까운 물체를 고르고, 땅이 더 가까우면 그 점으로 걸어갑니다(클릭 이동). 벽에 막혀 0.6초 동안 못 가면 멈춥니다.
-- **미니맵 HUD:** 위에서 내려다보는 직교 카메라로 장면을 한 번 더 그려 오른쪽 위 viewport(240×240 px, 가로세로 48 m)에 넣습니다. `glViewport`와 `glScissor`(three.js는 `setViewport`, `setScissor`)로 그리는 영역을 제한하고, 북쪽이 위입니다. 노란 화살표는 플레이어, 흰 선은 카메라 시야, 주황 점은 강아지, 빨간 점은 공, 초록 고리는 클릭 이동 목표입니다. Python 트랙은 지도 안에 걸치는 물체만 그리고(AABB culling), three.js는 frustum culling이 자동입니다.
-- **효과음:** 발소리(잔디와 포장도로를 구별), 공 던지기, 공 튀기기(땅, 벽), 강아지 짖기, 선택과 이동 클릭. 소리마다 세계 좌표가 있어 거리에 따라 작아지고(inverse 거리 모델) 좌우로 나뉩니다(equal-power panning). 귀는 캐릭터 머리에 두고 카메라 방향으로 돌립니다. 소리 목록과 음량은 `assets/sounds/sounds.json`.
-- **강아지 행동:** 아래 상태 기계
+## 재단과 완성 기준
 
-### 강아지 상태 기계 (`python/actors.py`, `web/actors.js`)
+원판은 2,140 × 180 × 15 mm입니다. 톱날이 한 번에 2 mm를 차지합니다.
 
-```
-WANDER ──플레이어가 6 m 안──▶ NOTICE ──0.5초──▶ APPROACH ──1.5 m까지 접근──▶ GREET ──2.6초──▶ FOLLOW
-  ▲  (집 주변 산책)          (멈춰서 쳐다봄)      (달려옴)                (깡충 3번, 춤추며 한 바퀴)   (졸졸 따라옴)
-  │                                                                                              │
-  └────────────────────────── 플레이어가 11 m 넘게 멀어짐 (Shift로 달려 따돌리기) ───────────────────┘
+| 부품 | 개수 | 길이 |
+|---|---:|---:|
+| 옆판 | 2 | 450 mm |
+| 가로판 | 3 | 300 mm |
+| 뒤쪽 보강판 | 1 | 330 mm |
 
-공을 던지면 (어느 상태에서든, 플레이어가 11 m 안에 있으면)
-  CHASE ──공이 멈추고 입이 닿음──▶ RETURN ──플레이어 앞 1.5 m──▶ DROP ──1초──▶ FOLLOW
-  (공을 쫓아 달림)                 (입에 물고 달려옴)              (내려놓고 꼬리 흔들기)
-```
+다섯 번 절단해 여섯 부품을 얻고, 옆판과 가로판을 배치합니다. 나사 6개를 각각 180° 조인 뒤 보강판을 놓고, 못 4개를 각각 3회 칩니다. 완성품의 외형은 330 × 450 × 195 mm입니다. 공방으로 나오면 작업대 주변을 걸으며 완성품을 살펴볼 수 있습니다.
 
-- 반경과 속도는 `Dog` 클래스 맨 위 상수입니다. 바꿔 가며 느낌을 조절해 보세요.
-- 이벤트는 observer 패턴으로 연결합니다. 강아지가 인사를 시작하면 `on_greet`(JS는 `onGreet`), 플레이어가 공을 던지면 `on_throw`(`onThrow`)에 등록된 함수가 불립니다. 예제는 이것으로 플레이어가 손을 흔들게 하고, 강아지가 공을 쫓게 합니다.
-- 효과음도 같은 방식입니다. `on_step`, `on_hit`(공), `on_bark`에 소리를 내는 함수를 등록했을 뿐이라, 게임 코드는 소리를 모릅니다. 새 소리를 붙이려면 이벤트에 함수 하나를 더 등록하면 됩니다.
-- 한 번 인사한 뒤에는 따라다니기만 합니다. 멀리 떠났다가 다시 오면 또 인사합니다.
+## 검증과 시연
 
-## 4. 장면 바꾸기: `scene.json`
+- **웹캠 실측**. 작업 모드에서 손 추적이 켜지면 설정 → 60초 성능 측정 → 측정 시작을 선택합니다. 60초 동안 손을 보이며 작업한 뒤 설정을 다시 열어 렌더링 중앙값 FPS와 유효한 손 좌표 갱신 횟수/초를 확인합니다. 기본 해상도 상한은 1280 × 720, 저사양은 960 × 540입니다. 저사양 모드는 웹캠에 320 × 240 입력을 요청해 추론 전에 옮기는 영상 크기를 줄입니다. 하드웨어 가속 WebGL 환경에서는 손 모델의 GPU 실행을 먼저 시도하고 실패하면 CPU 경로를 사용합니다. 실제 가로·세로 비율을 유지하므로 표시값은 화면에 따라 달라집니다. 과제 목표는 30 FPS 및 초당 10회입니다.
+- **좌표 재생 시연**. [시연 열기](http://localhost:8000/web/?replay=1)는 합성 손 좌표를 같은 입력 판정기에 전달합니다. 웹캠 권한 없이 자동 재생되며 일반 플레이의 저장 기록을 사용하지 않습니다. 제출 영상은 이 경로의 실제 화면과 효과음을 녹화한 것입니다.
+- **로직 회귀 검사**. Node.js 22.7 이상이 설치된 개발 환경에서 `node tests/workshop.mjs`를 실행합니다. 재단 길이, 손 추적 재시작, 왕복, 회전 방향, 타격 재장전, 저장 상태 순서를 검사합니다. Node.js는 일반 플레이에 필요하지 않습니다.
+- **사용성 목표**. 처음 사용하는 세 명에게 화면 안내만 제공하고, 시작부터 첫 450 mm 옆판이 떨어질 때까지 측정합니다. 3명 중 2명이 60초 안에 완료하는 것이 목표입니다.
 
-```jsonc
-{
-  "kitScale": { "mini-characters": 2.2, "cube-pets": 0.55, "city-kit-suburban": 6.0, "car-kit": 1.4,
-                "nature-kit": 3.0, "city-kit-roads": 8.0, "city-kit-commercial": 8.0 },
-  "ground": { "size": 160, "color": "#7cb85a" },          // 색은 sRGB hex
-  "sun": { "direction": [-0.45, -1.0, -0.35], "color": [1.0, 0.95, 0.85], "intensity": 2.0 },
-  "player": { "model": "mini-characters/character-female-b.glb", "pos": [0, 0, 6], "rotY": 0 },
-  "dog": { "model": "cube-pets/animal-dog.glb", "pos": [10, 0, -6], "home": [10, 0, -6], "wanderRadius": 4 },
-  "props": [
-    { "model": "city-kit-roads/road-straight.glb", "pos": [-8, -0.08, -16], "rotY": 0 },
-    { "model": "city-kit-suburban/building-type-a.glb", "pos": [-48, 0, -27], "rotY": 0 },
-    { "model": "nature-kit/tree_oak.glb", "pos": [12, 0, 3], "rotY": 40, "scale": 1.1 }
-  ]
-}
-```
+## 소스와 기여
 
-- 단위는 미터, y가 위쪽입니다. `rotY`는 y축 회전(도), `scale`은 키트 배율에 곱해집니다.
-- 모델 경로는 `assets/models/` 아래 상대 경로입니다. 각 키트의 `Preview.png`에서 모델을 고르세요.
-- **마을 격자:** 도로 타일 한 장이 8 m입니다. 타일 중심을 8의 배수 좌표에 두면 이어집니다. 차도 높이를 땅과 맞추려고 도로 타일은 `y = -0.08`에 둡니다(인도는 8 cm 높게 올라옵니다). `road-straight`는 `rotY` 0이면 동서 방향, 90이면 남북 방향입니다.
-- **충돌 규칙:** 길, 타일처럼 낮은 것은 막지 않고, 나무, 가로등, 표지판, 파라솔은 줄기나 기둥만 막습니다(`physics.py`의 `SKIP`, `POLES`).
-- **다른 장면 파일:** `CG_SCENE=my_scene.json uv run main.py`, 웹은 `?scene=my_scene.json`. 팩 폴더 기준 경로입니다.
-- 캐릭터는 `mini-characters/character-*.glb` 20명 중에서, 강아지 자리에는 `cube-pets/animal-*.glb` 24종 중 아무거나 넣을 수 있습니다(애니메이션 이름이 같습니다).
+첫 커밋은 배포된 Starter Pack의 원본 파일 1,204개입니다. `git log --oneline --reverse`로 확인할 수 있습니다. 원본의 마을과 Python 트랙은 첫 커밋에서 그대로 다시 열 수 있습니다.
 
-## 5. 코드 구조
-
-### `python/`
-
-| 파일 | 내용 |
+| 소스 | 역할 |
 |---|---|
-| `main.py` | 창, 입력, 게임 루프 |
-| `gltf.py` | GLB 파서, 노드 계층, skin, 애니메이션 샘플링과 cross-fade (GL 코드 없음) |
-| `renderer.py` | OpenGL 3.3 core: VAO 업로드, 셰이더, shadow map, AABB 선 그리기 |
-| `scene.py` | `scene.json` 읽기, `Instance`(위치, 회전, 크기, AABB), collider 만들기, 코드로 만든 바닥과 공 |
-| `physics.py` | 충돌(원 밀어내기), 공 물리, 마우스 ray와 AABB, 땅 교차 |
-| `minimap.py` | 미니맵: 두 번째 카메라, viewport와 scissor, 아이콘, 지도 클릭 |
-| `sound.py` | 효과음: pygame.mixer, 거리 감쇠, 좌우 패닝, 녹화용 믹스 |
-| `camera.py` | perspective, look-at, ortho 행렬과 3인칭 카메라 |
-| `actors.py` | `Player`, `Dog` (상태 기계) |
+| web/main.js, web/index.html | 원본 three.js 진입점을 공방 장면·탐색/작업 전환·장치 연결·한국어 안내로 확장 |
+| web/physics.js, web/sound.js | 팩의 바닥 충돌 밀어내기와 화면 광선 함수, Web Audio 효과음 구조 재사용. 현재 장면에서 쓰는 효과음만 읽도록 선택 인수 추가 |
+| web/workshop/project.js | 재단 계산, 단계와 저장 검증, 핀치·왕복·원호·타격 판정 |
+| web/workshop/scenery.js, station.js | 작업실과 공구 모델링, 연속된 나뭇결 UV, 절단 메시 분리, 작업면 이동, 도면 맞춤과 체결 깊이 |
+| web/workshop/hands.js, vision-worker.js | 한 손 MediaPipe 추론, 미리보기와 화면 좌표, 추적 중단·재연결, 웹 워커 및 호환 실행 |
+| web/workshop/guides.js, replay.js | 화면에 투영한 목표 위치와 도면, 시연용 손 좌표 재생 |
 
-### `web/`
-
-| 파일 | 내용 |
-|---|---|
-| `index.html` | import map(three.js 0.170.0), 화면 안내 |
-| `main.js` | 렌더러, 조명, HDRI, 모델 배치, 카메라, 입력, picking, 루프 |
-| `actors.js` | `Animator`(AnimationMixer 감싸기), `Player`, `Dog` |
-| `physics.js` | `physics.py`와 같은 충돌, 공, picking |
-| `minimap.js` | `minimap.py`와 같은 미니맵. 아이콘은 layer 1에 두어 미니맵 카메라만 그림 |
-| `sound.js` | `sound.py`와 같은 효과음. `THREE.AudioListener`, `THREE.PositionalAudio`. 브라우저는 첫 클릭이나 키 입력 뒤에 소리를 켭니다 |
-
-### 시연 각본 `docs/demo.json`
-
-시간별 동작 목록입니다. 두 트랙 모두 이 각본을 재생할 수 있습니다. 같은 입력에 대한 결과를 비교하거나 시연 영상을 만들 때 씁니다.
-
-- Python: `CG_DEMO=../docs/demo.json uv run main.py` (Windows PowerShell은 `$env:CG_DEMO="../docs/demo.json"; uv run main.py`). `CG_REC=demo.mp4`를 더하면 ffmpeg로 영상을 저장합니다.
-- three.js: http://localhost:8000/web/?demo=../docs/demo.json
-
-## 6. 확장 아이디어 (수업 내용과 연결)
-
-| 주제 | 해 볼 만한 것 |
-|---|---|
-| 텍스처 (W99 Texture Mapping) | `assets/textures`의 PBR 세트로 바닥에 albedo, normal, roughness 입히기. tangent space normal map 직접 구현 |
-| 조명과 재질 (W12) | 낮과 밤 전환, 가로등 point light 여러 개, HDRI 바꾸기, cascaded shadow map |
-| 가시성과 BVH (W10, W11) | AABB로 view frustum culling, 마우스 클릭 picking(ray와 AABB 교차), BVH로 가속 |
-| 게임 패턴 (W13) | 강아지 여러 마리, 쓰다듬기(근접 트리거), 겁 많은 고양이(같은 상태 기계로 반대 행동), 꽃 모으기와 점수, 저장과 불러오기 |
-| CSG와 SDF (W14) | SDF로 만든 오브젝트를 장면에 섞기, 레이마칭 하늘이나 물 |
-| 애니메이션 | 발이 땅에 맞는 걸음(속도와 동작 재생 속도 맞추기), 점프와 중력, 자동차 운전(`drive` 동작, 바퀴 노드 회전) |
-| 충돌과 길 찾기 | 회전된 물체의 OBB 충돌, 공과 캐릭터의 충돌, 클릭 이동에 A* 길 찾기(지금은 직선으로 가다 막히면 멈춤) |
-| 소리 | 배경 소리(새, 바람, 차 소리)를 구역별로, 강아지 발소리, 소리가 벽에 가려지면 작아지기(ray로 가림 검사), 도플러 효과 |
-| 미니맵 | 카메라 방향으로 돌아가는 지도, 원형 마스크, 확대와 축소, 지나간 길 표시, 안개 낀 미탐험 지역 |
-| 선택 | AABB 대신 삼각형 단위 ray 교차(정확한 picking), 선택한 물체 드래그로 옮기기, 장면 편집기 |
-
-## 7. 알아 둘 점
-
-- **Python 트랙 성능:** 물체가 아주 많아지면 Python의 draw call 비용이 커집니다. 같은 모델을 많이 쓰면 instancing(`glDrawElementsInstanced`)을 해 보세요. GL 오류를 추적할 때는 `main.py` 위쪽의 `OpenGL.ERROR_CHECKING`을 `True`로 바꾸세요(대신 느려집니다).
-- **Python 트랙 재질:** base color만 씁니다. normal, roughness 맵은 확장 과제로 남겨 두었습니다.
-- **three.js 트랙:** 같은 skinned 캐릭터를 여러 번 배치할 때는 `SkeletonUtils.clone`을 써야 합니다(예제 `place()`가 이미 그렇게 합니다).
-- **에셋 라이선스:** `ASSETS.md`를 보세요. 코드로 만든 던지기 소리 두 개(earshot, MIT)를 빼면 모두 CC0입니다.
+팩 에셋 출처는 [기존 에셋 목록](ASSETS.md), 새 의존성과 모델 출처는 [추가 출처](web/vendor/NOTICE.md)에 있습니다. 프로젝트 코드·장면·검사·보고서·시연 제작에는 OpenAI Codex를 사용했습니다. 목표 노트북에서의 성능과 초보 사용자 결과는 실제 측정 후 기록할 항목입니다.
