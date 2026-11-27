@@ -4,6 +4,9 @@ const messages = {
   NotAllowedError: '카메라 권한이 꺼져 있어요. 주소창의 카메라 설정에서 허용한 뒤 다시 연결하세요.',
   NotFoundError: '연결된 웹캠을 찾지 못했어요. 카메라를 연결한 뒤 다시 시도하세요.',
   NotReadableError: '웹캠을 열 수 없어요. 카메라를 사용하는 앱을 닫고 다시 연결하세요.',
+  NotSupportedError:
+    '웹캠 연결을 지원하지 않는 상태예요. Chrome이나 Edge에서 사이트의 카메라 권한을 확인하세요.',
+  AbortError: '웹캠 연결이 중단됐어요. 장치를 확인하고 다시 연결하세요.',
 };
 export class Hands {
   constructor(video, onFrame, onStatus) {
@@ -13,8 +16,24 @@ export class Hands {
     this.pinch = new Pinch();
     this.generation = 0;
     this.hz = 14;
+    this.smallInput = false;
+    this.preferGPU = false;
+    this.gpuFailed = false;
     this.active = false;
     this.frameId = 0;
+  }
+  captureSize() {
+    return {
+      width: { ideal: this.smallInput ? 320 : 640 },
+      height: { ideal: this.smallInput ? 240 : 480 },
+    };
+  }
+  setQuality(low) {
+    this.smallInput = low;
+    this.hz = low ? 10 : 14;
+    const track = this.stream?.getVideoTracks()[0];
+    // Prefer a smaller capture frame at the device to resizing every transferred frame.
+    track?.applyConstraints(this.captureSize()).catch(() => {});
   }
   async start() {
     this.stop();
@@ -24,7 +43,7 @@ export class Hands {
       if (!navigator.mediaDevices?.getUserMedia)
         throw Error('localhost 또는 HTTPS로 접속해 주세요.');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        video: { ...this.captureSize(), facingMode: 'user' },
         audio: false,
       });
       if (gen !== this.generation) {
@@ -62,12 +81,22 @@ export class Hands {
       if (gen !== this.generation) return;
       this.active = true;
       this.busy = false;
-      this.lastTime = 0;
+      this.nextInference = 0;
       this.lastVideo = -1;
       this.onStatus('ready', '손을 펴서 웹캠에 보여 주세요');
       this.schedule(gen);
     } catch (e) {
-      this.fail(gen, messages[e.name] || e.message || '카메라를 연결할 수 없어요.');
+      let message = messages[e.name];
+      try {
+        const permission = await navigator.permissions.query({ name: 'camera' });
+        if (permission.state === 'denied') message = messages.NotAllowedError;
+      } catch {}
+      if (!message) {
+        message = /[가-힣]/.test(e.message || '')
+          ? e.message
+          : '카메라나 손 인식 모델을 열 수 없어요. 장치와 사이트의 카메라 권한을 확인한 뒤 다시 연결하세요.';
+      }
+      this.fail(gen, message);
     }
   }
   loadWorker(gen) {
@@ -89,17 +118,22 @@ export class Hands {
         if (data.type === 'ready') {
           clearTimeout(timeout);
           this.cancelInit = null;
+          this.delegate = data.delegate;
           resolve();
         } else if (data.type === 'error') {
           clearTimeout(timeout);
-          if (this.active) this.fail(gen, '손 인식이 중단됐어요. 다시 연결해 주세요.');
+          if (this.active && this.delegate === 'GPU' && !this.gpuFailed) {
+            this.gpuFailed = true;
+            this.deliver(null, performance.now());
+            this.start();
+          } else if (this.active) this.fail(gen, '손 인식이 중단됐어요. 다시 연결해 주세요.');
           else reject(Error(data.message));
         } else if (data.type === 'hand') {
           this.busy = false;
           this.deliver(data.marks, data.time);
         }
       };
-      worker.postMessage({ type: 'init' });
+      worker.postMessage({ type: 'init', preferGPU: this.preferGPU && !this.gpuFailed });
     });
   }
   deliver(marks, time) {
@@ -116,12 +150,14 @@ export class Hands {
       if (
         this.busy ||
         this.video.readyState < 2 ||
-        time - this.lastTime < 1000 / this.hz ||
+        time < this.nextInference ||
         this.video.currentTime === this.lastVideo
       )
         return;
       this.busy = true;
-      this.lastTime = time;
+      // Keep the requested average cadence when display refresh and camera FPS differ.
+      const interval = 1000 / this.hz;
+      this.nextInference = Math.max(this.nextInference + interval, time + interval * 0.15);
       this.lastVideo = this.video.currentTime;
       try {
         if (this.worker) {

@@ -148,6 +148,14 @@ const hands = new Hands(
     updateUI();
   },
 );
+const gl = renderer.getContext();
+const gpuInfo = gl.getExtension('WEBGL_debug_renderer_info');
+hands.preferGPU =
+  !!gpuInfo &&
+  !/swiftshader|llvmpipe|software|basic render/i.test(
+    gl.getParameter(gpuInfo.UNMASKED_RENDERER_WEBGL),
+  );
+
 function resetGrip() {
   held = false;
   previousDown = false;
@@ -223,7 +231,7 @@ function updateUI() {
   $('mode').textContent = working ? (s === 6 ? '작품 완성' : '작업 모드') : '공방 탐색';
   const active = working && s < 6;
   const liveText = replay
-    ? '손 좌표 재생'
+    ? '시연 · 합성 손 좌표'
     : !active
       ? '웹캠 대기'
       : {
@@ -593,7 +601,7 @@ $('show-preview').onchange = (e) => {
 };
 $('quality').onchange = (e) => {
   quality = e.target.value;
-  hands.hz = quality === 'low' ? 10 : 14;
+  hands.setQuality(quality === 'low');
   cancelMeasurement();
   resize();
 };

@@ -8,15 +8,24 @@ self.onmessage = async ({ data }) => {
       );
       const root = new URL('../vendor/vision/', self.location.href).href;
       const files = await FilesetResolver.forVisionTasks(root + 'wasm');
-      task = await HandLandmarker.createFromOptions(files, {
-        canvas: new OffscreenCanvas(1, 1),
-        baseOptions: { modelAssetPath: root + 'hand_landmarker.task', delegate: 'CPU' },
-        runningMode: 'VIDEO',
-        numHands: 1,
-        minHandDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-      self.postMessage({ type: 'ready' });
+      const build = (delegate) =>
+        HandLandmarker.createFromOptions(files, {
+          canvas: new OffscreenCanvas(1, 1),
+          baseOptions: { modelAssetPath: root + 'hand_landmarker.task', delegate },
+          runningMode: 'VIDEO',
+          numHands: 1,
+          minHandDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      let delegate = data.preferGPU ? 'GPU' : 'CPU';
+      try {
+        task = await build(delegate);
+      } catch (error) {
+        if (delegate === 'CPU') throw error;
+        delegate = 'CPU';
+        task = await build(delegate);
+      }
+      self.postMessage({ type: 'ready', delegate });
     } else if (data.type === 'frame') {
       try {
         const result = task.detectForVideo(data.frame, data.time);
