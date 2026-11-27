@@ -65,8 +65,8 @@ export class Rehearsal {
       y = 0.1 + (0.8 * p.y) / h;
     const marks = Array.from({ length: 21 }, () => ({ x, y, z: 0 }));
     marks[4] = { x: x + (down ? 0.012 : 0.084), y, z: 0 };
-    marks[5] = { x: x + 0.045, y: y + 0.055, z: 0 };
-    marks[17] = { x: x - 0.065, y: y + 0.055, z: 0 };
+    marks[5] = { x: x + 0.055, y, z: 0 };
+    marks[17] = { x: x - 0.055, y, z: 0 };
     this.app.input(this.pinch.read(marks, 640, 480, t));
   }
   tick(t) {

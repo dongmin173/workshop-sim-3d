@@ -213,10 +213,12 @@ export class Pinch {
       this.down = false;
       this.ready = true;
     } else if (this.ready && ratio <= 0.3) this.down = true;
-    // Index fingertip remains the pointer both before and after a pinch.
-    const e = marks[8];
-    const x = clamp((1 - e.x - 0.1) / 0.8, 0, 1),
-      y = clamp((e.y - 0.1) / 0.8, 0, 1);
+    // The index and pinky base joints move less than the tips during a pinch.
+    const indexBase = marks[5], pinkyBase = marks[17];
+    const palmX = (indexBase.x + pinkyBase.x) / 2,
+      palmY = (indexBase.y + pinkyBase.y) / 2;
+    const x = clamp((1 - palmX - 0.1) / 0.8, 0, 1),
+      y = clamp((palmY - 0.1) / 0.8, 0, 1);
     const dt = this.point ? timestamp - this.point.t : 0;
     const alpha = this.point ? 1 - Math.exp(-clamp(dt, 1, 200) / 32) : 1;
     this.point = {

@@ -416,9 +416,10 @@ function input(pt) {
     if (!held) info = '손을 펴고 표시된 위치에서 다시 집어 주세요.';
   }
   if (held && station.moving) {
-    const on = station.onPlane(p);
-    if (on && grabOffset) station.moving.position.copy(on.add(grabOffset));
-    if (release) {
+    if (pt.down) {
+      const on = station.onPlane(p);
+      if (on && grabOffset) station.moving.position.copy(on.add(grabOffset));
+    } else if (release) {
       if (station.moving.position.distanceTo(station.target) <= 0.03) {
         complete(() => {
           if (s === 0) project.stockPlaced = true;
