@@ -64,6 +64,8 @@ let held = false,
   previousDown = false,
   point = null,
   grabOffset = null,
+  sawGripPending = false,
+  sawReleaseAt = null,
   info = '',
   lastSample = 0;
 let turn = new Turn(),
@@ -147,6 +149,7 @@ const hands = new Hands(
     updatePreview();
     updateUI();
   },
+  () => (held && station.s === 1 ? 420 : 180),
 );
 const gl = renderer.getContext();
 const gpuInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -160,6 +163,8 @@ function resetGrip() {
   held = false;
   previousDown = false;
   grabOffset = null;
+  sawGripPending = false;
+  sawReleaseAt = null;
   turn.reset();
   hammer.armed = false;
   point = null;
@@ -284,6 +289,7 @@ function updateUI() {
       guide = held
         ? '반투명 윤곽에 맞춘 뒤 엄지와 검지를 펴세요.'
         : '표시된 판자 위에서 엄지와 검지를 맞대어 집으세요.';
+    else if (s === 1 && sawGripPending) guide = '엄지와 검지를 맞댄 채 톱 손잡이 원으로 이동하세요.';
     else if (!held && !latched) guide = '표시된 공구 손잡이 위에서 엄지와 검지를 맞대세요.';
     else if (s === 1)
       guide =
@@ -374,7 +380,8 @@ function complete(edit, role, cutFrom = null) {
   }
 }
 function input(pt) {
-  lastSample = performance.now();
+  const now = performance.now();
+  lastSample = now;
   if (!working || phase(project) === 6) return;
   if (!pt) {
     if (point || previousDown) interruptInput();
@@ -386,8 +393,14 @@ function input(pt) {
   const g = station.guides(),
     s = station.s;
   const p = { x: pt.x * station.size.w, y: pt.y * station.size.h };
+  // Ignore a brief false release while the hand is moving quickly with the saw.
+  if (s === 1 && held && !pt.down) {
+    sawReleaseAt ??= now;
+    if (now - sawReleaseAt < 170) return;
+  }
+  sawReleaseAt = null;
   point = p;
-  if (movingCamera || performance.now() < station.transitionUntil) {
+  if (movingCamera || now < station.transitionUntil) {
     previousDown = pt.down;
     updateUI();
     return;
@@ -395,7 +408,14 @@ function input(pt) {
   const press = pt.down && !previousDown,
     release = !pt.down && previousDown;
   previousDown = pt.down;
-  if (press) {
+  if (s === 1) {
+    if (press) sawGripPending = true;
+    if (pt.down && sawGripPending && distance(p, g.pick) <= g.pickRadius) {
+      held = true;
+      sawGripPending = false;
+      play('select');
+    }
+  } else if (press) {
     info = '';
     if (station.moving && station.canGrab(p)) {
       const on = station.onPlane(p);
@@ -431,7 +451,7 @@ function input(pt) {
       info = '조금 더 가까이 놓아 주세요. 판자를 다시 집을 수 있어요.';
     }
   } else if (held && pt.down && s === 1) {
-    if (saw.update(p, g.a, g.b, Math.max(18, distance(g.a, g.b) * 0.23))) {
+    if (saw.update(p, g.a, g.b, Math.max(34, distance(g.a, g.b) * 0.5))) {
       if (saw.arrivals > 1) play('saw');
       if (saw.done) {
         const x = station.cutX;
@@ -475,7 +495,10 @@ function input(pt) {
     grabOffset = null;
     turn.reset();
     hammer.armed = false;
-    if (s === 1) saw.suspend();
+    if (s === 1) {
+      sawGripPending = false;
+      saw.suspend();
+    }
   }
   updateUI();
 }

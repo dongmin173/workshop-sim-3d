@@ -9,10 +9,11 @@ const messages = {
   AbortError: '웹캠 연결이 중단됐어요. 장치를 확인하고 다시 연결하세요.',
 };
 export class Hands {
-  constructor(video, onFrame, onStatus) {
+  constructor(video, onFrame, onStatus, trackingGrace = () => 180) {
     this.video = video;
     this.onFrame = onFrame;
     this.onStatus = onStatus;
+    this.trackingGrace = trackingGrace;
     this.pinch = new Pinch();
     this.generation = 0;
     this.hz = 14;
@@ -140,7 +141,7 @@ export class Hands {
   deliver(marks, time) {
     if (!marks) {
       // A brief tracking gap can occur when fingertips overlap.
-      if (this.lastHand !== null && time - this.lastHand < 180) return;
+      if (this.lastHand !== null && time - this.lastHand < this.trackingGrace()) return;
       this.lastHand = null;
       this.pinch.reset();
       this.onFrame(null, null);

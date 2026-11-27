@@ -31,6 +31,13 @@ s.suspend();
 assert.equal(s.rounds, 1);
 for (const p of [a, b, a]) s.update(p, a, b, 10);
 assert(s.done);
+
+const wideStroke = new Stroke();
+assert(wideStroke.update({ x: 130, y: 180 }, a, b, 50));
+assert.equal(wideStroke.update({ x: 155, y: 20 }, a, b, 50), false);
+assert(wideStroke.update({ x: 138, y: -40 }, a, b, 50));
+assert(wideStroke.update({ x: 65, y: 150 }, a, b, 50));
+assert.equal(wideStroke.rounds, 1);
 const turn = new Turn(),
   c = { x: 0, y: 0 };
 const circ = (a) => ({

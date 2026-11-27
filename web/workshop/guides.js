@@ -98,6 +98,7 @@ export function drawGuides(
     text(ctx, { x: g.dest.x, y: g.dest.y + 25 }, same && held ? '손 펴기' : '놓을 자리');
   } else if (g.pick) {
     if (!held && !latched) {
+      if (s === 1) circle(ctx, g.pick, g.pickRadius, '#213f3480');
       marker(ctx, g.pick, GOLD);
       text(ctx, { x: g.pick.x, y: g.pick.y + 23 }, '손잡이 집기', WHITE, '#744522');
     }

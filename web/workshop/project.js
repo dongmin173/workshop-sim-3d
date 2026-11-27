@@ -130,7 +130,7 @@ export class Stroke {
     if (len < 1) return false;
     const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (len * len);
     const side = Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / len;
-    if (side > tolerance || t < -0.45 || t > 1.45) return false;
+    if (side > tolerance || t < -0.7 || t > 1.7) return false;
     const reached = this.arrivals % 2 === 0 ? t <= 0.23 : t >= 0.77;
     if (reached) {
       this.arrivals++;

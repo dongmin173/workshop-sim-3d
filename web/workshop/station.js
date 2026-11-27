@@ -367,7 +367,9 @@ export class Station {
       anchor = V(this.cutX, RAW_Y + 0.011, RAW_Z);
       const a = this.screen(anchor.clone().add(V(0, 0, 0.089))),
         b = this.screen(anchor.clone().add(V(0, 0, -0.089)));
-      return { anchor, a, b, pick: { x: a.x + Math.min(82, w * 0.12), y: a.y + 10 } };
+      const pick = { x: a.x + Math.min(82, w * 0.12), y: a.y + 10 };
+      const pickRadius = Math.max(46, Math.min(72, h * 0.1));
+      return { anchor, a, b, pick, pickRadius };
     }
     anchor = this.hardware.g.position.clone();
     const c = this.screen(anchor),
