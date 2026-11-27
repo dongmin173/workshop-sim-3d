@@ -52,10 +52,15 @@ turn.reset();
 assert.equal(turn.update(circ(180), c, 50), 0);
 assert.equal(turn.update(circ(160), c, 50), 0);
 const h = new HammerStroke();
-for (let i = 0; i < 8; i++) assert.equal(h.update(c, c, 50, 20), false);
-h.update({ x: 0, y: -52 }, c, 50, 20);
-assert(h.update(c, c, 50, 20));
+for (const y of [-60, 0, 60, 0]) assert.equal(h.update({ x: 0, y }, c, 50, 20), false);
+assert.equal(h.update({ x: 52, y: 0 }, c, 50, 20), false);
+assert.equal(h.update({ x: 0, y: 24 }, c, 50, 20), false);
 assert.equal(h.update(c, c, 50, 20), false);
+for (let hit = 0; hit < 3; hit++) {
+  assert.equal(h.update({ x: 52, y: 0 }, c, 50, 20), false);
+  assert(h.update({ x: -5, y: 4 }, c, 50, 20));
+  assert.equal(h.update(c, c, 50, 20), false);
+}
 const marks = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 }));
 marks[5] = { x: 0.55, y: 0.55 };
 marks[17] = { x: 0.45, y: 0.55 };

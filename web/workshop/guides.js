@@ -137,19 +137,16 @@ export function drawGuides(
         );
       } else text(ctx, { x: g.c.x - 32, y: g.c.y - 24 }, held ? '끝 맞추기' : '나사');
     } else {
-      if (held && !latched) {
-        circle(ctx, g.align, 14, MINT);
-        arrow(ctx, point || g.pick, g.align, DARK);
+      circle(ctx, g.c, 9, GOLD);
+      if (held) {
+        const strike = g.strike,
+          back = { x: strike.x + g.pull, y: strike.y };
+        line(ctx, { x: back.x, y: back.y - 19 }, { x: back.x, y: back.y + 19 }, DARK, 2, [5, 4]);
+        line(ctx, { x: strike.x, y: strike.y - 19 }, { x: strike.x, y: strike.y + 19 }, GOLD, 3);
+        arrow(ctx, hammerArmed ? back : strike, hammerArmed ? strike : back, DARK);
+        text(ctx, { x: back.x, y: back.y + 30 }, '당기기');
+        text(ctx, { x: strike.x, y: strike.y + 30 }, '타격');
       }
-      marker(ctx, g.c, GOLD);
-      const hi = { x: g.c.x, y: g.c.y - g.lift };
-      line(ctx, { x: hi.x - 30, y: hi.y }, { x: hi.x + 30, y: hi.y }, DARK, 2, [5, 4]);
-      line(ctx, { x: g.c.x - 30, y: g.c.y }, { x: g.c.x + 30, y: g.c.y }, GOLD, 3);
-      if (latched) {
-        arrow(ctx, hammerArmed ? hi : g.c, hammerArmed ? g.c : hi, DARK);
-        text(ctx, { x: hi.x - 57, y: hi.y }, '들어 올림');
-        text(ctx, { x: g.c.x - 54, y: g.c.y }, '타격');
-      } else text(ctx, { x: g.c.x - 25, y: g.c.y - 23 }, held ? '끝 맞추기' : '못');
     }
   }
   if (point) {

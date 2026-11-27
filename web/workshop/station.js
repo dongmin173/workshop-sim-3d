@@ -343,10 +343,10 @@ export class Station {
       span = 1.25;
       vertical = 0.75;
     } else if (s === 5) {
-      aim = this.hardware.p.clone().add(V(0, 0.045, 0));
-      dir = V(0.19, 0.19, -1);
-      span = 0.57;
-      vertical = 0.39;
+      aim = this.hardware.p.clone().add(V(0, -0.028, -0.065));
+      dir = V(1, 0.12, -0.44);
+      span = 0.46;
+      vertical = 0.32;
     } else {
       aim = BOOK.clone().add(V(0, 0.22, 0));
       dir = V(0.6, 0.29, 1);
@@ -371,16 +371,26 @@ export class Station {
       const pickRadius = Math.max(46, Math.min(72, h * 0.1));
       return { anchor, a, b, pick, pickRadius };
     }
+    if (this.s === 5) {
+      const { g, p, normal } = this.hardware;
+      anchor = g.position.clone().addScaledVector(normal, 0.0011);
+      const scale = 0.76,
+        grip = V(0, 0.024, 0),
+        face = V(-0.043, 0.127, 0);
+      const offset = face.sub(grip).multiplyScalar(scale).applyQuaternion(this.camera.quaternion);
+      const strike = this.screen(anchor.clone().sub(offset));
+      const seatedStrike = this.screen(p.clone().addScaledVector(normal, 0.0024).sub(offset));
+      const pull = Math.min(96, w * 0.17, h * 0.17);
+      const pick = { x: strike.x + pull * 1.18, y: strike.y };
+      const tolerance = Math.max(24, Math.min(42, h * 0.065));
+      return { anchor, c: this.screen(anchor), strike, seatedStrike, pull, pick, tolerance, grip, scale };
+    }
     anchor = this.hardware.g.position.clone();
     const c = this.screen(anchor),
-      r = Math.min(64, w * 0.12, h * 0.128),
-      lift = Math.min(82, h * 0.18);
+      r = Math.min(64, w * 0.12, h * 0.128);
     const pick = { x: c.x + r * 1.45, y: c.y + Math.min(30, h * 0.055) };
-    const driver = this.s === 3,
-      roll = driver ? -0.65 : Math.PI - 0.65,
-      scale = 0.86;
-    const grip = driver ? V(0, 0.075, 0) : V(0, 0.024, 0);
-    const tip = driver ? V(0, -0.016, 0) : V(-0.035, 0.127, 0);
+    const roll = -0.65, scale = 0.86;
+    const grip = V(0, 0.075, 0), tip = V(0, -0.016, 0);
     const front = anchor.clone().addScaledVector(this.camera.getWorldDirection(V()), -0.035);
     const localDelta = tip
       .clone()
@@ -391,7 +401,7 @@ export class Station {
     const origin = this.screen(front),
       tipScreen = this.screen(front.clone().add(localDelta));
     const align = { x: c.x - (tipScreen.x - origin.x), y: c.y - (tipScreen.y - origin.y) };
-    return { anchor, c, pick, r, lift, front, grip, tip, roll, scale, align };
+    return { anchor, c, pick, r, front, grip, roll, scale, align };
   }
   paintTool(g, held, latched, point) {
     const t = this.activeTool;
@@ -410,22 +420,32 @@ export class Station {
       t.scale.setScalar(0.7);
       const local = held ? V(0.06, -0.021, 0) : V(-0.047, -0.01, 0);
       t.position.copy(w).sub(local.multiplyScalar(0.7).applyQuaternion(t.quaternion));
-    } else if (this.s === 3 && latched) {
+    } else if (this.s === 5) {
+      let p = g.pick;
+      if (held && point) {
+        const dy = point.y - g.strike.y;
+        p = {
+          x: Math.max(g.strike.x, point.x),
+          y: g.strike.y + Math.sign(dy) * Math.max(0, Math.abs(dy) - g.tolerance),
+        };
+      }
+      const w = this.screenPlane(p, g.anchor);
+      if (!w) return;
+      t.scale.setScalar(g.scale);
+      t.position.copy(w).sub(g.grip.clone().multiplyScalar(g.scale).applyQuaternion(t.quaternion));
+    } else if (latched) {
       t.position.copy(this.hardware.g.position);
       t.quaternion.setFromUnitVectors(V(0, 1, 0), this.hardware.normal);
       t.rotateY((-this.p.screws[this.idx] * Math.PI) / 180);
       t.translateY(0.013);
       t.scale.setScalar(0.82);
     } else {
-      const p = held && point ? point : latched ? g.c : g.pick;
+      const p = held && point ? point : g.pick;
       const w = this.screenPlane(p, g.front);
       if (!w) return;
       t.rotateZ(g.roll);
       t.scale.setScalar(g.scale);
-      const local = (latched ? g.tip : g.grip)
-        .clone()
-        .multiplyScalar(g.scale)
-        .applyQuaternion(t.quaternion);
+      const local = g.grip.clone().multiplyScalar(g.scale).applyQuaternion(t.quaternion);
       t.position.copy(w).sub(local);
     }
   }

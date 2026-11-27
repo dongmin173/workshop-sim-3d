@@ -45,17 +45,14 @@ export class Rehearsal {
       hold(at((28 * Math.PI) / 21), false, 160);
     } else if (s === 5) {
       pick(g.pick);
-      add(g.align, true, 300);
-      hold(g.align, true, 180);
-      const hi = { x: g.c.x, y: g.c.y - g.lift * 1.24 },
-        low = { x: g.c.x, y: g.c.y + g.lift * 0.22 };
-      for (let n = 0; n < 4; n++) {
-        add(hi, true, 240);
-        hold(hi, true, 155);
-        add(low, true, 210);
-        hold(low, true, 115);
+      const hit = { x: g.seatedStrike.x - 10, y: g.seatedStrike.y };
+      for (let n = 0; n < 3; n++) {
+        add(g.pick, true, 240);
+        hold(g.pick, true, 155);
+        add(hit, true, 210);
+        hold(hit, true, 115);
       }
-      hold(low, false, 150);
+      hold(hit, false, 150);
     }
     return seq;
   }

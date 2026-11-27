@@ -183,13 +183,13 @@ export class HammerStroke {
   constructor() {
     this.armed = false;
   }
-  update(p, c, lift, width) {
-    if (Math.abs(p.x - c.x) > width) {
+  update(p, strike, pull, tolerance) {
+    if (Math.abs(p.y - strike.y) > tolerance) {
       this.armed = false;
       return false;
     }
-    if (p.y <= c.y - lift) this.armed = true;
-    if (this.armed && p.y >= c.y - 4 && p.y <= c.y + lift * 0.75) {
+    if (p.x >= strike.x + pull) this.armed = true;
+    if (this.armed && p.x <= strike.x + 4) {
       this.armed = false;
       return true;
     }

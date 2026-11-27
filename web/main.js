@@ -298,24 +298,16 @@ function updateUI() {
         '   왕복 ' +
         saw.rounds +
         ' / 2';
-    else if (!latched)
-      guide =
-        s === 3
-          ? '손을 빈 원으로 옮겨 드라이버 끝을 나사에 맞추세요.'
-          : '손을 빈 원으로 옮겨 망치 머리를 못에 맞추세요.';
     else if (s === 3)
-      guide = held
-        ? '원 둘레를 따라 시계 방향으로 돌리세요. 다시 잡아 이어갈 수 있어요.'
-        : '원 오른쪽 점에서 다시 집고 시계 방향으로 돌리세요.';
-    else
-      guide = held
-        ? (hammer.armed
-            ? '손을 아래 타격선까지 내리세요.'
-            : '망치를 위쪽 점선까지 다시 들어 주세요.') +
-          '   ' +
-          project.nails[i] +
-          ' / 3타'
-        : '못 또는 위쪽 점선에서 다시 집으세요.';
+      guide = !latched
+        ? '손을 빈 원으로 옮겨 드라이버 끝을 나사에 맞추세요.'
+        : held
+          ? '원 둘레를 따라 시계 방향으로 돌리세요. 다시 잡아 이어갈 수 있어요.'
+          : '원 오른쪽 점에서 다시 집고 시계 방향으로 돌리세요.';
+    else if (s === 5)
+      guide =
+        (hammer.armed ? '망치를 왼쪽으로 밀어 못을 치세요.' : '망치를 오른쪽 점선까지 당기세요.') +
+        '   ' + project.nails[i] + ' / 3타';
     if (info) guide = info;
     if (!replay && cameraStatus === 'missing')
       guide = '손을 카메라 안에 다시 보여 주세요. 손을 편 뒤 다시 집으세요.';
@@ -424,12 +416,7 @@ function input(pt) {
         held = true;
       }
     } else if (g.pick) {
-      const nextGrip =
-        latched && s === 3
-          ? distance(p, g.c) < g.r * 1.65
-          : latched && s === 5
-            ? Math.abs(p.x - g.c.x) < 48 && Math.abs(p.y - g.c.y) < g.lift + 26
-            : false;
+      const nextGrip = latched && s === 3 && distance(p, g.c) < g.r * 1.65;
       held = distance(p, g.pick) < Math.max(26, Math.min(38, station.size.h * 0.06)) || nextGrip;
       if (held) play('select');
     }
@@ -459,12 +446,12 @@ function input(pt) {
         return;
       }
     }
-  } else if (held && pt.down && (s === 3 || s === 5)) {
+  } else if (held && pt.down && s === 3) {
     if (!latched && distance(p, g.align) < Math.max(20, g.r * 0.38)) {
       latched = true;
       play('select');
       turn.reset();
-    } else if (latched && s === 3) {
+    } else if (latched) {
       const i = station.idx,
         old = project.screws[i],
         value = Math.min(180, old + turn.update(p, g.c, g.r));
@@ -478,17 +465,17 @@ function input(pt) {
           return;
         }
       }
-    } else if (latched && s === 5 && hammer.update(p, g.c, g.lift, Math.max(25, g.r * 0.65))) {
-      const i = station.idx;
-      project.nails[i]++;
-      station.hardware.update(project.nails[i] / 3);
-      persist();
-      if (project.nails[i] === 3) {
-        complete(() => {}, 'hammer');
-        return;
-      }
-      play('hammer');
     }
+  } else if (held && pt.down && s === 5 && hammer.update(p, g.strike, g.pull, g.tolerance)) {
+    const i = station.idx;
+    project.nails[i]++;
+    station.hardware.update(project.nails[i] / 3);
+    if (project.nails[i] === 3) {
+      complete(() => {}, 'hammer');
+      return;
+    }
+    persist();
+    play('hammer');
   }
   if (release) {
     held = false;
