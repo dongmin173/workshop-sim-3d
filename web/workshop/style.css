@@ -469,6 +469,14 @@ dialog button {
     padding-block: 9px;
   }
 }
+@media (max-width: 380px) {
+  .mark {
+    display: none;
+  }
+  h1 {
+    white-space: nowrap;
+  }
+}
 @media (max-width: 700px) {
   header {
     height: 54px;
@@ -476,6 +484,13 @@ dialog button {
   }
   .sub {
     display: none;
+  }
+  nav {
+    gap: 5px;
+  }
+  nav button {
+    padding-inline: 6px;
+    white-space: nowrap;
   }
   h1 {
     font-size: 22px;

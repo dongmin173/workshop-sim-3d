@@ -304,13 +304,7 @@ export class Station {
     this.moving.updateWorldMatrix(true, false);
     const caster = new T.Raycaster();
     caster.ray.copy(this.ray(p));
-    return (
-      caster.intersectObject(this.moving, false).length > 0 ||
-      Math.hypot(
-        p.x - this.screen(this.moving.position).x,
-        p.y - this.screen(this.moving.position).y,
-      ) < 30
-    );
+    return caster.intersectObject(this.moving, false).length > 0;
   }
   view() {
     const s = this.s,
@@ -359,8 +353,9 @@ export class Station {
   }
   guides() {
     const { w, h } = this.size;
+    const pickRadius = Math.max(46, Math.min(72, h * 0.1));
     if (this.moving)
-      return { item: this.screen(this.moving.position), dest: this.screen(this.target) };
+      return { item: this.screen(this.moving.position), dest: this.screen(this.target), pickRadius };
     if (!this.activeTool) return {};
     let anchor;
     if (this.s === 1) {
@@ -368,7 +363,6 @@ export class Station {
       const a = this.screen(anchor.clone().add(V(0, 0, 0.089))),
         b = this.screen(anchor.clone().add(V(0, 0, -0.089)));
       const pick = { x: a.x + Math.min(82, w * 0.12), y: a.y + 10 };
-      const pickRadius = Math.max(46, Math.min(72, h * 0.1));
       return { anchor, a, b, pick, pickRadius };
     }
     if (this.s === 5) {
@@ -383,7 +377,7 @@ export class Station {
       const pull = Math.min(96, w * 0.17, h * 0.17);
       const pick = { x: strike.x + pull * 1.18, y: strike.y };
       const tolerance = Math.max(24, Math.min(42, h * 0.065));
-      return { anchor, c: this.screen(anchor), strike, seatedStrike, pull, pick, tolerance, grip, scale };
+      return { anchor, c: this.screen(anchor), strike, seatedStrike, pull, pick, pickRadius, tolerance, grip, scale };
     }
     anchor = this.hardware.g.position.clone();
     const c = this.screen(anchor),
@@ -401,7 +395,7 @@ export class Station {
     const origin = this.screen(front),
       tipScreen = this.screen(front.clone().add(localDelta));
     const align = { x: c.x - (tipScreen.x - origin.x), y: c.y - (tipScreen.y - origin.y) };
-    return { anchor, c, pick, r, front, grip, roll, scale, align };
+    return { anchor, c, pick, pickRadius, r, front, grip, roll, scale, align };
   }
   paintTool(g, held, latched, point) {
     const t = this.activeTool;

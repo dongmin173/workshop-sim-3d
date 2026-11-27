@@ -4,11 +4,16 @@ import { phase, targetIndex, Pinch } from './project.js';
 export class Rehearsal {
   constructor(access) {
     this.app = access;
+    this.pinch = new Pinch();
+    this.reset();
+  }
+  reset() {
     this.key = '';
     this.queue = [];
     this.first = null;
     this.last = 0;
-    this.pinch = new Pinch();
+    this.started = false;
+    this.pinch.reset();
     this.completedPasses = 0;
   }
   makeQueue(s, g) {
@@ -26,7 +31,7 @@ export class Rehearsal {
       pick(g.item);
       add(g.dest, true, 570);
       hold(g.dest, true, 240);
-      hold(g.dest, false, 180);
+      hold(g.dest, false, 300);
     } else if (s === 1) {
       pick(g.pick);
       for (const p of [g.a, g.b, g.a, g.b, g.a]) {

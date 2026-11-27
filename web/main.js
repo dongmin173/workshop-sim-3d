@@ -64,8 +64,8 @@ let held = false,
   previousDown = false,
   point = null,
   grabOffset = null,
-  sawGripPending = false,
-  sawReleaseAt = null,
+  gripPending = false,
+  releaseAt = null,
   info = '',
   lastSample = 0;
 let turn = new Turn(),
@@ -149,7 +149,7 @@ const hands = new Hands(
     updatePreview();
     updateUI();
   },
-  () => (held && station.s === 1 ? 420 : 180),
+  () => (held ? 420 : 180),
 );
 const gl = renderer.getContext();
 const gpuInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -163,8 +163,8 @@ function resetGrip() {
   held = false;
   previousDown = false;
   grabOffset = null;
-  sawGripPending = false;
-  sawReleaseAt = null;
+  gripPending = false;
+  releaseAt = null;
   turn.reset();
   hammer.armed = false;
   point = null;
@@ -285,11 +285,11 @@ function updateUI() {
           : s === 5
             ? ' · ' + (i + 1) + '/4'
             : '');
-    if (s === 0 || s === 2 || s === 4)
+    if (gripPending) guide = '엄지와 검지를 맞댄 채 잡기 표시로 이동하세요.';
+    else if (s === 0 || s === 2 || s === 4)
       guide = held
         ? '반투명 윤곽에 맞춘 뒤 엄지와 검지를 펴세요.'
         : '표시된 판자 위에서 엄지와 검지를 맞대어 집으세요.';
-    else if (s === 1 && sawGripPending) guide = '엄지와 검지를 맞댄 채 톱 손잡이 원으로 이동하세요.';
     else if (!held && !latched) guide = '표시된 공구 손잡이 위에서 엄지와 검지를 맞대세요.';
     else if (s === 1)
       guide =
@@ -385,12 +385,12 @@ function input(pt) {
   const g = station.guides(),
     s = station.s;
   const p = { x: pt.x * station.size.w, y: pt.y * station.size.h };
-  // Ignore a brief false release while the hand is moving quickly with the saw.
-  if (s === 1 && held && !pt.down) {
-    sawReleaseAt ??= now;
-    if (now - sawReleaseAt < 170) return;
+  // Ignore brief pinch misreads while an item is held.
+  if (held && !pt.down) {
+    releaseAt ??= now;
+    if (now - releaseAt < 170) return;
   }
-  sawReleaseAt = null;
+  releaseAt = null;
   point = p;
   if (movingCamera || now < station.transitionUntil) {
     previousDown = pt.down;
@@ -400,27 +400,24 @@ function input(pt) {
   const press = pt.down && !previousDown,
     release = !pt.down && previousDown;
   previousDown = pt.down;
-  if (s === 1) {
-    if (press) sawGripPending = true;
-    if (pt.down && sawGripPending && distance(p, g.pick) <= g.pickRadius) {
-      held = true;
-      sawGripPending = false;
-      play('select');
-    }
-  } else if (press) {
+  if (press) {
+    gripPending = true;
     info = '';
-    if (station.moving && station.canGrab(p)) {
+  }
+  if (pt.down && gripPending) {
+    const center = g.item || g.pick;
+    const nearGrip = center && distance(p, center) <= g.pickRadius;
+    if (station.moving && (nearGrip || station.canGrab(p))) {
       const on = station.onPlane(p);
       if (on) {
         grabOffset = station.moving.position.clone().sub(on);
         held = true;
       }
-    } else if (g.pick) {
-      const nextGrip = latched && s === 3 && distance(p, g.c) < g.r * 1.65;
-      held = distance(p, g.pick) < Math.max(26, Math.min(38, station.size.h * 0.06)) || nextGrip;
-      if (held) play('select');
+    } else if (!station.moving && (nearGrip || (s === 3 && latched && distance(p, g.c) < g.r * 1.65))) {
+      held = true;
+      play('select');
     }
-    if (!held) info = '손을 펴고 표시된 위치에서 다시 집어 주세요.';
+    if (held) gripPending = false;
   }
   if (held && station.moving) {
     if (pt.down) {
@@ -482,10 +479,8 @@ function input(pt) {
     grabOffset = null;
     turn.reset();
     hammer.armed = false;
-    if (s === 1) {
-      sawGripPending = false;
-      saw.suspend();
-    }
+    gripPending = false;
+    if (s === 1) saw.suspend();
   }
   updateUI();
 }
@@ -626,14 +621,28 @@ $('reset-stage').onclick = () => {
   renew(null, true);
   $('settings').close();
 };
-$('new').onclick = () => {
+function startOver() {
   if (!confirm('현재 제작 기록을 지우고 새 판자로 시작할까요?')) return;
-  if (working) leave();
+  const settings = $('settings');
+  if (settings.open) settings.close();
   project = fresh();
   persist();
-  renew();
-  $('settings').close();
-};
+  finishedAt = 0;
+  if (demo) {
+    demo.reset();
+    eventLog.length = 0;
+  }
+  if (!working) {
+    enter();
+    return;
+  }
+  cancelMeasurement();
+  $('alert').hidden = true;
+  renew(null, true);
+  if (!replay) hands.start();
+}
+$('restart').onclick = startOver;
+$('new').onclick = startOver;
 $('measure').onclick = () => {
   if (!hands.active || !working || replay) return;
   recording = { start: performance.now(), frames: [], hands: 0, last: 0 };
