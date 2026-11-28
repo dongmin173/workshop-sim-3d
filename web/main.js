@@ -4,7 +4,7 @@ import { Sound } from './sound.js';
 import { Hands } from './workshop/hands.js';
 import { Station } from './workshop/station.js';
 import { TOP } from './workshop/scenery.js';
-import { drawGuides, blueprint, drawSkeleton } from './workshop/guides.js';
+import { drawGuides, blueprint, drawSkeleton } from './workshop/guides.js?v=hand-cursor';
 import {
   PARTS,
   STEPS,
