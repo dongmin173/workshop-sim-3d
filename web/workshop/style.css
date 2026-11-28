@@ -136,6 +136,13 @@ main {
   background: #cfc6ac;
   isolation: isolate;
 }
+#world {
+  cursor: grab;
+}
+#world:active,
+#world.gripping {
+  cursor: grabbing;
+}
 #world,
 #overlay {
   position: absolute;

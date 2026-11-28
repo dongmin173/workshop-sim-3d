@@ -168,6 +168,7 @@ function resetGrip() {
   grabOffset = null;
   gripPending = false;
   gripClosed = false;
+  world.classList.remove('gripping');
   handPose = null;
   turn.reset();
   hammer.armed = false;
@@ -395,6 +396,7 @@ function input(pt, marks, width, height) {
   point = p;
   handPose = marks ? { marks, x: pt.palmX, y: pt.palmY, width, height } : null;
   gripClosed = pt.down;
+  world.classList.toggle('gripping', gripClosed);
   const press = pt.down && !previousDown,
     release = !pt.down && previousDown;
   previousDown = pt.down;
