@@ -57,7 +57,7 @@ function marker(ctx, p, color) {
 }
 export function drawGuides(
   ctx,
-  { s, g, held, latched, point, station, work, near, rounds, hammerArmed, benchPoint },
+  { s, g, held, latched, point, handPose, gripClosed, station, work, near, rounds, sawTowardB, hammerArmed, benchPoint },
 ) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   if (!work) {
@@ -96,7 +96,8 @@ export function drawGuides(
     const same = Math.hypot(g.item.x - g.dest.x, g.item.y - g.dest.y) < 42;
     if (!held || !same)
       text(ctx, { x: g.item.x, y: g.item.y - 25 }, held ? '이동 중' : '집기', WHITE, '#744522');
-    text(ctx, { x: g.dest.x, y: g.dest.y + 25 }, same && held ? '손 펴기' : '놓을 자리');
+    const ready = held && station.canPlace();
+    text(ctx, { x: g.dest.x, y: g.dest.y + 25 }, ready ? '손 펴기' : '놓을 자리', ready ? DARK : WHITE, ready ? MINT : DARK);
   } else if (g.pick) {
     if (!held && !latched) {
       circle(ctx, g.pick, g.pickRadius, '#213f3480');
@@ -110,8 +111,9 @@ export function drawGuides(
         [g.a, 'A'],
         [g.b, 'B'],
       ]) {
-        marker(ctx, pos, GOLD);
-        text(ctx, { x: pos.x - 18, y: pos.y }, tag);
+        const next = held && (tag === 'B') === sawTowardB;
+        marker(ctx, pos, next ? MINT : GOLD);
+        text(ctx, { x: pos.x - 18, y: pos.y }, tag, next ? DARK : WHITE, next ? MINT : DARK);
       }
       if (held) text(ctx, { x: g.a.x - 66, y: (g.a.y + g.b.y) / 2 }, rounds + ' / 2 왕복');
     } else if (s === 3) {
@@ -127,6 +129,14 @@ export function drawGuides(
         ctx.beginPath();
         ctx.arc(g.c.x, g.c.y, g.r, -1.35, 1.04);
         ctx.stroke();
+        const degrees = station.p.screws[station.idx];
+        if (degrees > 0) {
+          ctx.strokeStyle = MINT;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(g.c.x, g.c.y, g.r, 0, degrees * Math.PI / 180);
+          ctx.stroke();
+        }
         const h = { x: g.c.x + g.r * Math.cos(1.04), y: g.c.y + g.r * Math.sin(1.04) };
         line(ctx, h, { x: h.x + 1, y: h.y - 10 }, GOLD, 3);
         line(ctx, h, { x: h.x + 11, y: h.y - 2 }, GOLD, 3);
@@ -134,7 +144,7 @@ export function drawGuides(
         text(
           ctx,
           { x: g.c.x, y: g.c.y + g.r + 21 },
-          Math.round(station.p.screws[station.idx]) + '° / 180°',
+          Math.round(degrees) + '° / 180°',
         );
       } else text(ctx, { x: g.c.x - 32, y: g.c.y - 24 }, held ? '끝 맞추기' : '나사');
     } else {
@@ -147,10 +157,24 @@ export function drawGuides(
         arrow(ctx, hammerArmed ? back : strike, hammerArmed ? strike : back, DARK);
         text(ctx, { x: back.x, y: back.y + 30 }, '당기기');
         text(ctx, { x: strike.x, y: strike.y + 30 }, '타격');
+        text(ctx, { x: g.c.x, y: g.c.y - 24 }, station.p.nails[station.idx] + ' / 3타');
       }
     }
   }
-  if (point) {
+  if (point && handPose?.width && handPose.height) {
+    const { marks, x, y, width, height } = handPose;
+    const scale = Math.min(ctx.canvas.width / width, ctx.canvas.height / height) * 0.34;
+    const joints = marks.map((m) => ({
+      x: point.x + (x - m.x) * width * scale,
+      y: point.y + (m.y - y) * height * scale,
+    }));
+    const palmSize = Math.max(
+      Math.hypot(joints[5].x - joints[17].x, joints[5].y - joints[17].y),
+      Math.hypot(joints[0].x - joints[9].x, joints[0].y - joints[9].y),
+    );
+    paintHand(ctx, joints, Math.max(4, Math.min(14, palmSize * 0.28)), held ? GOLD : gripClosed ? MINT : WHITE);
+    circle(ctx, point, 2, DARK, true);
+  } else if (point) {
     circle(ctx, point, held ? 10 : 13, '#1d3e35', true);
     circle(ctx, point, held ? 9 : 12, held ? GOLD : WHITE);
     circle(ctx, point, 3, held ? GOLD : WHITE, true);
@@ -215,20 +239,48 @@ export function blueprint(canvas) {
     c.fillText(label, (a.x + b.x) / 2 + (off ? 0 : 12), (a.y + b.y) / 2 + off);
   }
 }
-export function drawSkeleton(canvas, marks) {
+const FINGERS = [
+  [1, 2, 3, 4],
+  [5, 6, 7, 8],
+  [9, 10, 11, 12],
+  [13, 14, 15, 16],
+  [17, 18, 19, 20],
+];
+
+function paintHand(ctx, points, width, color) {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (const i of [1, 5, 9, 13, 17]) ctx.lineTo(points[i].x, points[i].y);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = DARK;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  for (const [base, ...joints] of FINGERS) {
+    ctx.moveTo(points[base].x, points[base].y);
+    for (const i of joints) ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.strokeStyle = DARK;
+  ctx.lineWidth = width + 3;
+  ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+  for (const [, ...joints] of FINGERS) {
+    for (const i of joints.slice(0, 2)) circle(ctx, points[i], width * 0.14, DARK, true);
+  }
+  ctx.restore();
+}
+
+export function drawSkeleton(canvas, marks, closed) {
   const c = canvas.getContext('2d');
   c.clearRect(0, 0, canvas.width, canvas.height);
   if (!marks) return;
   const p = marks.map((m) => ({ x: m.x * canvas.width, y: m.y * canvas.height }));
-  for (const chain of [
-    [0, 1, 2, 3, 4],
-    [0, 5, 6, 7, 8],
-    [5, 9, 10, 11, 12],
-    [9, 13, 14, 15, 16],
-    [13, 17, 18, 19, 20],
-    [17, 0],
-  ]) {
-    for (let i = 1; i < chain.length; i++) line(c, p[chain[i - 1]], p[chain[i]], MINT, 3);
-  }
-  for (const q of p) circle(c, q, 3, GOLD, true);
+  paintHand(c, p, Math.max(4, canvas.width * 0.009), closed ? GOLD : MINT);
 }

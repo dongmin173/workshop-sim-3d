@@ -115,6 +115,13 @@ export function save(p) {
 
 // Input uses CSS pixels relative to the 3D viewport, with y increasing downwards.
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+export function workPoint(point, { w, h }, cameraWidth, cameraHeight) {
+  const scale = Math.max(w / Math.max(1, cameraWidth), h / Math.max(1, cameraHeight));
+  return {
+    x: clamp(w / 2 + (point.x - 0.5) * cameraWidth * scale, 0, w),
+    y: clamp(h / 2 + (point.y - 0.5) * cameraHeight * scale, 0, h),
+  };
+}
 export class Stroke {
   constructor() {
     this.reset();
@@ -204,26 +211,49 @@ export class Pinch {
     this.down = false;
     this.ready = false;
     this.closingAt = null;
+    this.openAt = null;
     this.gripOffset = null;
     this.point = null;
   }
   read(marks, width, height, timestamp) {
-    const dist = (a, b) =>
-      Math.hypot((marks[a].x - marks[b].x) * width, (marks[a].y - marks[b].y) * height);
+    const cameraPoints = marks.map(({ x, y, z = 0 }) => ({
+      x: x * width,
+      y: y * height,
+      z: z * width,
+    }));
+    const dist = (a, b) => {
+      const p = cameraPoints[a], q = cameraPoints[b];
+      return Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z);
+    };
     // Palm length still gives a useful scale when the hand turns edge-on.
     const palmSize = Math.max(8, dist(5, 17), dist(0, 9));
     const ratio = dist(4, 8) / palmSize;
+    let curled = 0;
+    for (const base of [5, 9, 13, 17]) {
+      const tip = base + 3;
+      const length = dist(base, base + 1) + dist(base + 1, base + 2) + dist(base + 2, tip);
+      if (length < palmSize * 0.3) continue;
+      const reach = dist(base, tip) / length;
+      if (reach < 0.7 && dist(0, tip) <= dist(0, base + 1) + palmSize * 0.12) curled++;
+    }
     const wasDown = this.down;
-    if (ratio >= 0.55) {
-      this.down = false;
+    const gripping = ratio <= 0.42 || curled >= 3;
+    const opening = ratio >= 0.56 && curled <= 1;
+    if (opening) {
+      this.openAt ??= timestamp;
+      if (timestamp - this.openAt >= 45) this.down = false;
       this.ready = true;
       this.closingAt = null;
-    } else if (this.ready && !wasDown) {
-      this.closingAt ??= timestamp;
-      this.down = ratio <= 0.36;
+    } else {
+      this.openAt = null;
+      if (this.ready && !wasDown) {
+        this.closingAt ??= timestamp;
+        this.down = gripping;
+      }
     }
     // Keep the previous aim briefly while closing, including the first grabbed frame.
-    const steady = this.closingAt !== null && timestamp - this.closingAt <= 160;
+    const pressed = !wasDown && this.down;
+    const steady = pressed || (this.closingAt !== null && timestamp - this.closingAt <= 160);
     if (this.down) this.closingAt = null;
 
     const [wrist, indexBase, middleBase, ringBase, pinkyBase] = [0, 5, 9, 13, 17].map(
@@ -237,7 +267,7 @@ export class Pinch {
     const dt = clamp(timestamp - previous.t, 1, 200);
     const released = wasDown && !this.down;
     // Keep the pointer continuous at both edges of the grip.
-    if ((steady && this.down) || released) {
+    if (pressed || released) {
       this.gripOffset = { x: previous.x - palmScreenX, y: previous.y - palmScreenY };
     } else if (!this.down && this.gripOffset) {
       const remaining = Math.exp(-dt / 180);
@@ -249,9 +279,9 @@ export class Pinch {
     const dx = x - previous.x,
       dy = y - previous.y;
     const motion = Math.hypot(dx * width * 0.8, dy * height * 0.8) / palmSize;
-    const smoothing = 95 - 60 * clamp(motion / 0.22, 0, 1);
+    const smoothing = 75 - 49 * clamp(motion / 0.22, 0, 1);
     const alpha = steady ? 0 : 1 - Math.exp(-dt / smoothing);
     this.point = { x: previous.x + alpha * dx, y: previous.y + alpha * dy, t: timestamp };
-    return { ...this.point, down: this.down };
+    return { ...this.point, down: this.down, palmX, palmY };
   }
 }

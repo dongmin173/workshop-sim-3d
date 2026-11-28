@@ -351,6 +351,9 @@ export class Station {
       dist = hWorld / (2 * Math.tan(T.MathUtils.degToRad(this.camera.fov) / 2));
     return { pos: aim.clone().addScaledVector(dir.normalize(), dist), aim };
   }
+  canPlace() {
+    return this.moving && this.moving.position.distanceTo(this.target) <= 0.03;
+  }
   guides() {
     const { w, h } = this.size;
     const pickRadius = Math.max(46, Math.min(72, h * 0.1));

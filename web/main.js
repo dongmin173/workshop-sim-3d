@@ -18,6 +18,7 @@ import {
   save,
   phase,
   targetIndex,
+  workPoint,
 } from './workshop/project.js';
 const $ = (id) => document.getElementById(id);
 const world = $('world'),
@@ -63,9 +64,10 @@ let held = false,
   latched = false,
   previousDown = false,
   point = null,
+  handPose = null,
+  gripClosed = false,
   grabOffset = null,
   gripPending = false,
-  releaseAt = null,
   info = '',
   lastSample = 0;
 let turn = new Turn(),
@@ -126,16 +128,20 @@ const hands = new Hands(
   (pt, marks) => {
     if (!working || document.hidden || $('settings').open) return;
     if (recording && pt) recording.hands++;
+    const v = $('camera');
     if (qualityPreview) {
-      const sk = $('skeleton'),
-        v = $('camera');
+      const sk = $('skeleton');
       if (sk.width !== v.videoWidth || sk.height !== v.videoHeight) {
         sk.width = v.videoWidth || 640;
         sk.height = v.videoHeight || 480;
+        $('preview').style.aspectRatio = `${sk.width} / ${sk.height}`;
       }
-      drawSkeleton(sk, marks);
+      drawSkeleton(sk, marks, pt?.down);
     }
-    input(pt);
+    input(pt, v.videoWidth, v.videoHeight);
+    if (point && marks) {
+      handPose = { marks, x: pt.palmX, y: pt.palmY, width: v.videoWidth, height: v.videoHeight };
+    }
   },
   (state, msg) => {
     cameraStatus = state;
@@ -149,7 +155,7 @@ const hands = new Hands(
     updatePreview();
     updateUI();
   },
-  () => (held ? 420 : 180),
+  () => (held ? 500 : 180),
 );
 const gl = renderer.getContext();
 const gpuInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -164,7 +170,8 @@ function resetGrip() {
   previousDown = false;
   grabOffset = null;
   gripPending = false;
-  releaseAt = null;
+  gripClosed = false;
+  handPose = null;
   turn.reset();
   hammer.armed = false;
   point = null;
@@ -285,12 +292,14 @@ function updateUI() {
           : s === 5
             ? ' · ' + (i + 1) + '/4'
             : '');
-    if (gripPending) guide = '엄지와 검지를 맞댄 채 잡기 표시로 이동하세요.';
+    if (gripPending) guide = '손을 쥔 채 잡기 표시로 이동하세요.';
     else if (s === 0 || s === 2 || s === 4)
       guide = held
-        ? '반투명 윤곽에 맞춘 뒤 엄지와 검지를 펴세요.'
-        : '표시된 판자 위에서 엄지와 검지를 맞대어 집으세요.';
-    else if (!held && !latched) guide = '표시된 공구 손잡이 위에서 엄지와 검지를 맞대세요.';
+        ? station.canPlace()
+          ? '손을 펴서 판자를 놓으세요.'
+          : '판자를 반투명 윤곽에 맞춰 옮기세요.'
+        : '판자 위에서 주먹을 쥐거나 엄지와 검지를 맞대세요.';
+    else if (!held && !latched) guide = '공구 손잡이 위에서 주먹을 쥐거나 엄지와 검지를 맞대세요.';
     else if (s === 1)
       guide =
         '톱을 ' +
@@ -371,7 +380,7 @@ function complete(edit, role, cutFrom = null) {
     updateUI();
   }
 }
-function input(pt) {
+function input(pt, cameraWidth, cameraHeight) {
   const now = performance.now();
   lastSample = now;
   if (!working || phase(project) === 6) return;
@@ -384,25 +393,21 @@ function input(pt) {
   cameraStatus = 'tracked';
   const g = station.guides(),
     s = station.s;
-  const p = { x: pt.x * station.size.w, y: pt.y * station.size.h };
-  // Ignore brief pinch misreads while an item is held.
-  if (held && !pt.down) {
-    releaseAt ??= now;
-    if (now - releaseAt < 170) return;
-  }
-  releaseAt = null;
+  const size = station.size;
+  const p = workPoint(pt, size, cameraWidth || size.w, cameraHeight || size.h);
   point = p;
-  if (movingCamera || now < station.transitionUntil) {
-    previousDown = pt.down;
-    updateUI();
-    return;
-  }
+  gripClosed = pt.down;
   const press = pt.down && !previousDown,
     release = !pt.down && previousDown;
   previousDown = pt.down;
   if (press) {
     gripPending = true;
     info = '';
+  }
+  if (movingCamera || now < station.transitionUntil) {
+    if (release) gripPending = false;
+    updateUI();
+    return;
   }
   if (pt.down && gripPending) {
     const center = g.item || g.pick;
@@ -424,7 +429,7 @@ function input(pt) {
       const on = station.onPlane(p);
       if (on && grabOffset) station.moving.position.copy(on.add(grabOffset));
     } else if (release) {
-      if (station.moving.position.distanceTo(station.target) <= 0.03) {
+      if (station.canPlace()) {
         complete(() => {
           if (s === 0) project.stockPlaced = true;
           else if (s === 2) project.placed++;
@@ -715,10 +720,13 @@ function frame(t) {
     held,
     latched,
     point,
+    handPose,
+    gripClosed,
     station,
     work: working,
     near,
     rounds: saw.rounds,
+    sawTowardB: saw.arrivals % 2 === 1,
     hammerArmed: hammer.armed,
     benchPoint: cp.z > -1 && cp.z < 1 ? station.screen(bp) : null,
   });

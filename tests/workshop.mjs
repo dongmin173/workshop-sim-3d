@@ -9,6 +9,7 @@ import {
   Turn,
   HammerStroke,
   Pinch,
+  workPoint,
 } from '../web/workshop/project.js';
 const model = cutList(5);
 assert.deepEqual(
@@ -92,8 +93,10 @@ assert(moved.x < grabbed.x - 0.1);
 marks[4] = { x: 0.72, y: 0.43 };
 marks[8] = { x: 0.58, y: 0.33 };
 const released = gesture.read(marks, 640, 480, 240);
-assert.equal(released.down, false);
-assert.equal(released.y, moved.y);
+assert.equal(released.down, true);
+const confirmed = gesture.read(marks, 640, 480, 320);
+assert.equal(confirmed.down, false);
+assert.equal(confirmed.y, moved.y);
 
 // The palm still sets the pinch scale when its width is foreshortened.
 const edgeOn = new Pinch();
@@ -124,9 +127,41 @@ assert(dragging.x < aimed.x - 0.10);
 for (const mark of marks) mark.x -= 0.05;
 marks[4].x = marks[8].x + 0.12;
 const opened = edgeOn.read(marks, 640, 480, 350);
-assert.equal(opened.down, false);
-assert.equal(opened.x, dragging.x);
-assert.equal(opened.y, dragging.y);
+assert.equal(opened.down, true);
+const unlatched = edgeOn.read(marks, 640, 480, 420);
+assert.equal(unlatched.down, false);
+assert.equal(unlatched.x, opened.x);
+assert.equal(unlatched.y, opened.y);
+
+// A fist closes in one sample even when the thumb and index do not touch.
+const fist = new Pinch();
+const pose = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.68, z: 0 }));
+pose[4] = { x: 0.66, y: 0.55, z: 0 };
+function fingers(folded) {
+  for (const [i, base] of [5, 9, 13, 17].entries()) {
+    const x = 0.44 + i * 0.038;
+    const y = 0.51 + Math.abs(i - 1) * 0.012;
+    pose[base] = { x, y, z: 0 };
+    pose[base + 1] = { x, y: y - 0.055, z: 0 };
+    pose[base + 2] = { x, y: y - (folded ? 0.04 : 0.09), z: folded ? -0.03 : 0 };
+    pose[base + 3] = { x, y: y - (folded ? 0.006 : 0.125), z: folded ? -0.025 : 0 };
+  }
+}
+fingers(false);
+assert.equal(fist.read(pose, 1280, 720, 0).down, false);
+fingers(true);
+assert.equal(fist.read(pose, 1280, 720, 65).down, true);
+fingers(false);
+assert.equal(fist.read(pose, 1280, 720, 130).down, true);
+fingers(true);
+assert.equal(fist.read(pose, 1280, 720, 195).down, true);
+fingers(false);
+assert.equal(fist.read(pose, 1280, 720, 260).down, true);
+assert.equal(fist.read(pose, 1280, 720, 325).down, false);
+const view = { w: 1280, h: 720 };
+assert.deepEqual(workPoint({ x: 0.625, y: 0.5 }, view, 640, 480), { x: 800, y: 360 });
+assert.deepEqual(workPoint({ x: 0.5, y: 2 / 3 }, view, 640, 480), { x: 640, y: 520 });
+assert.deepEqual(workPoint({ x: 0, y: 1 }, view, 640, 480), { x: 0, y: 720 });
 const p = fresh();
 assert(valid(p));
 assert.equal(phase(p), 0);
