@@ -1,6 +1,24 @@
 // A separately labelled presentation route. The normal URL never loads this module.
 // These synthetic 21-point samples follow the same Pinch and workbench handlers as the webcam.
 import { phase, targetIndex, Pinch } from './project.js';
+
+// Landmark order matches the webcam model. Both poses share the same palm.
+const OPEN_HAND = [
+  [0, 2.75],
+  [2.7, 0.7], [4.4, 0.1], [5.9, -0.9], [6.8, -2.2],
+  [3.6, -2.4], [4.3, -4.9], [4.6, -6.6], [4.8, -8.1],
+  [1.3, -3.1], [1.4, -6.1], [1.4, -8], [1.4, -9.6],
+  [-1.3, -3], [-1.6, -5.7], [-1.8, -7.5], [-2, -8.9],
+  [-3.6, -2.5], [-4.3, -4.6], [-4.8, -6], [-5.2, -7.1],
+];
+const CLOSED_HAND = new Map([
+  [3, [5, -1.9]], [4, [5.5, -3]],
+  [6, [4, -4.35]], [7, [5, -4.35]], [8, [5.7, -3.1]],
+  [10, [1.4, -5.6]], [11, [1.6, -5.4]], [12, [1.8, -3.8]],
+  [14, [-1.6, -5.3]], [15, [-1.7, -5.1]], [16, [-1.5, -3.7]],
+  [18, [-4.1, -4.4]], [19, [-4.2, -4.2]], [20, [-3.9, -3.1]],
+]);
+
 export class Rehearsal {
   constructor(access) {
     this.app = access;
@@ -62,14 +80,16 @@ export class Rehearsal {
     return seq;
   }
   sample(p, down, t) {
-    const { w, h } = this.app.station.size,
-      x = 1 - (0.1 + (0.8 * p.x) / w),
-      y = 0.1 + (0.8 * p.y) / h;
-    const marks = Array.from({ length: 21 }, () => ({ x, y, z: 0 }));
-    marks[4] = { x: x + (down ? 0.012 : 0.084), y, z: 0 };
-    marks[5] = { x: x + 0.055, y, z: 0 };
-    marks[17] = { x: x - 0.055, y, z: 0 };
-    this.app.input(this.pinch.read(marks, 640, 480, t));
+    const { w, h } = this.app.station.size;
+    if (!w || !h) return;
+    const x = 0.9 - (0.8 * p.x) / w,
+      y = 0.1 + (0.8 * p.y) / h,
+      scale = Math.min(w, h) * 0.026;
+    const marks = OPEN_HAND.map((open, i) => {
+      const [dx, dy] = (down && CLOSED_HAND.get(i)) || open;
+      return { x: x + (dx * scale) / w, y: y + (dy * scale) / h, z: 0 };
+    });
+    this.app.input(this.pinch.read(marks, w, h, t), marks, w, h);
   }
   tick(t) {
     if (this.first === null) this.first = t;

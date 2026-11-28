@@ -138,10 +138,7 @@ const hands = new Hands(
       }
       drawSkeleton(sk, marks, pt?.down);
     }
-    input(pt, v.videoWidth, v.videoHeight);
-    if (point && marks) {
-      handPose = { marks, x: pt.palmX, y: pt.palmY, width: v.videoWidth, height: v.videoHeight };
-    }
+    input(pt, marks, v.videoWidth, v.videoHeight);
   },
   (state, msg) => {
     cameraStatus = state;
@@ -380,7 +377,7 @@ function complete(edit, role, cutFrom = null) {
     updateUI();
   }
 }
-function input(pt, cameraWidth, cameraHeight) {
+function input(pt, marks, width, height) {
   const now = performance.now();
   lastSample = now;
   if (!working || phase(project) === 6) return;
@@ -394,8 +391,9 @@ function input(pt, cameraWidth, cameraHeight) {
   const g = station.guides(),
     s = station.s;
   const size = station.size;
-  const p = workPoint(pt, size, cameraWidth || size.w, cameraHeight || size.h);
+  const p = workPoint(pt, size, width || size.w, height || size.h);
   point = p;
+  handPose = marks ? { marks, x: pt.palmX, y: pt.palmY, width, height } : null;
   gripClosed = pt.down;
   const press = pt.down && !previousDown,
     release = !pt.down && previousDown;

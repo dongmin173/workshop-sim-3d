@@ -9,8 +9,10 @@ import {
   Turn,
   HammerStroke,
   Pinch,
+  distance,
   workPoint,
 } from '../web/workshop/project.js';
+import { Rehearsal } from '../web/workshop/replay.js';
 const model = cutList(5);
 assert.deepEqual(
   model.pieces.map((p) => p.length),
@@ -162,6 +164,29 @@ const view = { w: 1280, h: 720 };
 assert.deepEqual(workPoint({ x: 0.625, y: 0.5 }, view, 640, 480), { x: 800, y: 360 });
 assert.deepEqual(workPoint({ x: 0.5, y: 2 / 3 }, view, 640, 480), { x: 640, y: 520 });
 assert.deepEqual(workPoint({ x: 0, y: 1 }, view, 640, 480), { x: 0, y: 720 });
+
+// The demo delivers a full hand pose through the same cursor input as the webcam.
+for (const size of [view, { w: 360, h: 480 }]) {
+  const samples = [];
+  const demo = new Rehearsal({
+    station: { size },
+    input: (pt, marks, width, height) => samples.push({ pt, marks, width, height }),
+  });
+  const target = { x: size.w / 4, y: (3 * size.h) / 4 };
+  for (const [down, time] of [[false, 0], [true, 65], [false, 130], [false, 195]]) {
+    demo.sample(target, down, time);
+  }
+  assert.deepEqual(samples.map(({ pt }) => pt.down), [false, true, true, false]);
+  for (const { pt, marks, width, height } of samples) {
+    assert.equal(marks.length, 21);
+    assert.equal(new Set(marks.map(({ x, y }) => `${x},${y}`)).size, 21);
+    assert.equal(width, size.w);
+    assert.equal(height, size.h);
+    assert(distance(workPoint(pt, size, width, height), target) < 1e-8);
+  }
+  assert.deepEqual(samples[0].marks[9], samples[1].marks[9]);
+  assert.notDeepEqual(samples[0].marks[8], samples[1].marks[8]);
+}
 const p = fresh();
 assert(valid(p));
 assert.equal(phase(p), 0);

@@ -90,8 +90,10 @@ export function drawGuides(
   if (s === 6) return;
   if (g.item) {
     arrow(ctx, g.item, g.dest, DARK);
-    if (!held) circle(ctx, g.item, g.pickRadius, '#213f3480');
-    marker(ctx, g.item, GOLD);
+    if (!held) {
+      circle(ctx, g.item, g.pickRadius, '#213f3480');
+      marker(ctx, g.item, GOLD);
+    }
     marker(ctx, g.dest, MINT);
     const same = Math.hypot(g.item.x - g.dest.x, g.item.y - g.dest.y) < 42;
     if (!held || !same)
@@ -161,23 +163,30 @@ export function drawGuides(
       }
     }
   }
-  if (point && handPose?.width && handPose.height) {
+  if (point && handPose?.marks && handPose.width && handPose.height) {
     const { marks, x, y, width, height } = handPose;
-    const scale = Math.min(ctx.canvas.width / width, ctx.canvas.height / height) * 0.34;
+    const palmSize = Math.max(
+      Math.hypot((marks[5].x - marks[17].x) * width, (marks[5].y - marks[17].y) * height),
+      Math.hypot((marks[0].x - marks[9].x) * width, (marks[0].y - marks[9].y) * height),
+    );
+    const fittedScale = Math.min(ctx.canvas.width / width, ctx.canvas.height / height) * 0.34;
+    const drawnPalm = Math.max(30, Math.min(48, palmSize * fittedScale));
+    const scale = drawnPalm / Math.max(palmSize, Math.min(width, height) * 0.06);
     const joints = marks.map((m) => ({
       x: point.x + (x - m.x) * width * scale,
       y: point.y + (m.y - y) * height * scale,
     }));
-    const palmSize = Math.max(
-      Math.hypot(joints[5].x - joints[17].x, joints[5].y - joints[17].y),
-      Math.hypot(joints[0].x - joints[9].x, joints[0].y - joints[9].y),
-    );
-    paintHand(ctx, joints, Math.max(4, Math.min(14, palmSize * 0.28)), held ? GOLD : gripClosed ? MINT : WHITE);
-    circle(ctx, point, 2, DARK, true);
-  } else if (point) {
-    circle(ctx, point, held ? 10 : 13, '#1d3e35', true);
-    circle(ctx, point, held ? 9 : 12, held ? GOLD : WHITE);
-    circle(ctx, point, 3, held ? GOLD : WHITE, true);
+    const fingerWidth = Math.max(4, palmSize * scale * 0.26);
+    paintHand(ctx, joints, fingerWidth, held ? GOLD : gripClosed ? MINT : WHITE);
+    const { x: aimX, y: aimY } = point;
+    ctx.beginPath();
+    ctx.moveTo(aimX, aimY - 3);
+    ctx.lineTo(aimX + 3, aimY);
+    ctx.lineTo(aimX, aimY + 3);
+    ctx.lineTo(aimX - 3, aimY);
+    ctx.closePath();
+    ctx.fillStyle = DARK;
+    ctx.fill();
   }
 }
 export function blueprint(canvas) {
@@ -251,29 +260,62 @@ function paintHand(ctx, points, width, color) {
   ctx.save();
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (const i of [1, 5, 9, 13, 17]) ctx.lineTo(points[i].x, points[i].y);
-  ctx.closePath();
+
+  const wrist = points[0], index = points[5], pinky = points[17];
+  const heelX = (index.x - pinky.x) * 0.29, heelY = (index.y - pinky.y) * 0.29;
+  const palm = new Path2D();
+  palm.moveTo(wrist.x + heelX, wrist.y + heelY);
+  palm.quadraticCurveTo(points[1].x, points[1].y, index.x, index.y);
+  for (const i of [9, 13, 17]) palm.lineTo(points[i].x, points[i].y);
+  palm.quadraticCurveTo(
+    pinky.x * 0.3 + wrist.x * 0.7 - heelX, pinky.y * 0.3 + wrist.y * 0.7 - heelY,
+    wrist.x - heelX, wrist.y - heelY,
+  );
+  palm.quadraticCurveTo(
+    wrist.x + (wrist.x - points[9].x) * 0.18, wrist.y + (wrist.y - points[9].y) * 0.18,
+    wrist.x + heelX, wrist.y + heelY,
+  );
+  palm.closePath();
+
+  const fingers = FINGERS.map(([base, mid, end, tip]) => {
+    const a = points[base], b = points[mid], c = points[end], d = points[tip];
+    const path = new Path2D();
+    path.moveTo(a.x, a.y);
+    path.quadraticCurveTo(b.x, b.y, (b.x + c.x) / 2, (b.y + c.y) / 2);
+    path.quadraticCurveTo(c.x, c.y, d.x, d.y);
+    return { path, thickness: width * (base === 17 ? 0.78 : base === 1 ? 1.12 : 1) };
+  });
+
+  // Outline the union first so the fingers grow continuously out of the palm.
+  ctx.fillStyle = DARK;
+  ctx.fill(palm);
+  ctx.strokeStyle = DARK;
+  ctx.lineWidth = 3;
+  ctx.stroke(palm);
+  for (const { path, thickness } of fingers) {
+    ctx.lineWidth = thickness + 3;
+    ctx.stroke(path);
+  }
   ctx.fillStyle = color;
-  ctx.fill();
-  ctx.strokeStyle = DARK;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.beginPath();
-  for (const [base, ...joints] of FINGERS) {
-    ctx.moveTo(points[base].x, points[base].y);
-    for (const i of joints) ctx.lineTo(points[i].x, points[i].y);
-  }
-  ctx.strokeStyle = DARK;
-  ctx.lineWidth = width + 3;
-  ctx.stroke();
+  ctx.fill(palm);
   ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.stroke();
-  for (const [, ...joints] of FINGERS) {
-    for (const i of joints.slice(0, 2)) circle(ctx, points[i], width * 0.14, DARK, true);
+  for (const { path, thickness } of fingers) {
+    ctx.lineWidth = thickness;
+    ctx.stroke(path);
   }
+
+  // Short knuckle creases stay legible when fingertips fold over the palm.
+  ctx.strokeStyle = '#41604c';
+  ctx.lineWidth = Math.max(1, width * 0.12);
+  ctx.beginPath();
+  for (const [base, mid, end] of FINGERS) {
+    const p = points[mid];
+    const dx = points[end].x - points[base].x, dy = points[end].y - points[base].y;
+    const scale = width * 0.22 / Math.max(1, Math.hypot(dx, dy));
+    ctx.moveTo(p.x - dy * scale, p.y + dx * scale);
+    ctx.lineTo(p.x + dy * scale, p.y - dx * scale);
+  }
+  ctx.stroke();
   ctx.restore();
 }
 
