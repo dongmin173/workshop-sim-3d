@@ -99,6 +99,17 @@
           'code 폴더에서 py -m http.server 8000 실행 후 http://localhost:8000/web/ 로 접속하세요.';
       }
     </script>
-    <script type="module" src="./main.js?v=hand-cursor"></script>
+    <script type="module">
+      if (location.protocol !== 'file:') {
+        import('./main.js?v=startup-feedback').catch((error) => {
+          console.error('Workshop startup failed', error);
+          const alert = document.getElementById('load-error');
+          if (!alert.hidden) return;
+          alert.textContent =
+            '공방을 불러오지 못했어요. 페이지를 새로고침해 주세요. 계속 문제가 생기면 개발자 도구의 콘솔에서 오류를 확인할 수 있어요.';
+          alert.hidden = false;
+        });
+      }
+    </script>
   </body>
 </html>
